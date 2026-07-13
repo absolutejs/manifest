@@ -1,5 +1,5 @@
 import type { Static, TSchema } from '@sinclair/typebox';
-import type { PackageManifest } from './types';
+import type { AdapterImplementation, PackageManifest } from './types';
 
 type ExcessKeys<S extends TSchema, TConfig> = Exclude<
 	keyof Static<S>,
@@ -48,3 +48,25 @@ export const defineManifest =
 		}
 	): PackageManifest<TConfig, TRuntime> =>
 		manifest as PackageManifest<TConfig, TRuntime>;
+
+/** Same drift-breaker for an adapter implementation's settings schema,
+ *  checked against the factory's options type. Keys that are wired rather
+ *  than configured (injected clients, callbacks) simply stay out of the
+ *  schema — the subset check permits that.
+ *
+ *  ```ts
+ *  defineImplementation<CreateResendAdapterOptions>()({
+ *  	contract: 'dispatch/email-adapter',
+ *  	settings: Type.Object({ defaultFrom: Type.Optional(Type.String()) }),
+ *  	...
+ *  });
+ *  ```
+ */
+export const defineImplementation =
+	<TOptions>() =>
+	<S extends TSchema>(
+		implementation: Omit<AdapterImplementation, 'settings'> & {
+			settings?: S & ValidSettings<S, TOptions>;
+		}
+	): AdapterImplementation =>
+		implementation as AdapterImplementation;

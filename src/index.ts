@@ -1,4 +1,4 @@
-export { defineManifest } from './defineManifest';
+export { defineImplementation, defineManifest } from './defineManifest';
 export { toolFactory } from './tools';
 export { toAIToolMap, toMcpToolRegistry } from './bridges';
 export { manifestSchema, serializeManifest } from './schema';
