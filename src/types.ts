@@ -153,9 +153,12 @@ export type AdapterImplementation = {
 	/** Import specifier: the package itself or a subpath. */
 	from: string;
 	title: string;
-	/** TypeBox schema for the factory's serializable options. */
+	/** TypeBox schema for the wiring snippet's serializable parameters
+	 *  (${settings} inside this implementation's wiring expands from it). */
 	settings?: TSchema;
-	env?: ReadonlyArray<EnvRequirement>;
+	/** What choosing this implementation additionally requires: env keys,
+	 *  extra npm packages (e.g. the AWS SDK for the S3 store), services. */
+	requires?: ManifestRequirements;
 	/** Snippet producing the adapter instance; expands into the host slot's
 	 *  ${slot.name} placeholder. */
 	wiring: WiringSnippet;

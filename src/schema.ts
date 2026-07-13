@@ -66,11 +66,29 @@ const adapterSlot = Type.Object({
 /** Any JSON-Schema-shaped object (a TypeBox schema at rest is plain JSON). */
 const jsonSchemaObject = Type.Record(Type.String(), Type.Unknown());
 
+const peerRequirement = Type.Object({
+	name: Type.String(),
+	range: Type.String(),
+	reason: Type.Optional(Type.String())
+});
+
+const serviceRequirement = Type.Object({
+	description: Type.String(),
+	id: Type.String(),
+	optional: Type.Optional(Type.Boolean())
+});
+
+const manifestRequirements = Type.Object({
+	env: Type.Optional(Type.Array(envRequirement)),
+	peers: Type.Optional(Type.Array(peerRequirement)),
+	services: Type.Optional(Type.Array(serviceRequirement))
+});
+
 const adapterImplementation = Type.Object({
 	contract: Type.String({ pattern: '^[a-z0-9-]+/[a-z0-9-]+$' }),
-	env: Type.Optional(Type.Array(envRequirement)),
 	factory: Type.String({ minLength: 1 }),
 	from: Type.String({ minLength: 1 }),
+	requires: Type.Optional(manifestRequirements),
 	settings: Type.Optional(jsonSchemaObject),
 	title: Type.String(),
 	wiring: wiringSnippet
@@ -148,29 +166,7 @@ export const manifestSchema = Type.Object({
 			})
 		)
 	),
-	requires: Type.Optional(
-		Type.Object({
-			env: Type.Optional(Type.Array(envRequirement)),
-			peers: Type.Optional(
-				Type.Array(
-					Type.Object({
-						name: Type.String(),
-						range: Type.String(),
-						reason: Type.Optional(Type.String())
-					})
-				)
-			),
-			services: Type.Optional(
-				Type.Array(
-					Type.Object({
-						description: Type.String(),
-						id: Type.String(),
-						optional: Type.Optional(Type.Boolean())
-					})
-				)
-			)
-		})
-	),
+	requires: Type.Optional(manifestRequirements),
 	settings: jsonSchemaObject,
 	slots: Type.Optional(Type.Record(Type.String(), adapterSlot)),
 	tools: Type.Optional(
