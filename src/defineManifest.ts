@@ -6,16 +6,32 @@ type ExcessKeys<S extends TSchema, TConfig> = Exclude<
 	keyof TConfig
 >;
 
+/** Every property optional, recursively; functions and arrays pass through.
+ *  Settings are checked against DeepPartial<TConfig> rather than
+ *  Partial<TConfig> because config subtrees often mix serializable knobs
+ *  with wiring-time material (an OAuth provider entry requires
+ *  `credentials`, but credentials come from env at wiring time and must
+ *  never appear in a settings schema). Key-name and value-type drift is
+ *  still caught; only nested requiredness is relaxed — the conformance
+ *  suite's runtime deep-key check covers that. */
+type DeepPartial<T> = T extends (...args: never[]) => unknown
+	? T
+	: T extends ReadonlyArray<infer U>
+		? ReadonlyArray<DeepPartial<U>>
+		: T extends object
+			? { [K in keyof T]?: DeepPartial<T[K]> }
+			: T;
+
 /** Resolves to `unknown` (intersection no-op) when the schema is a valid
- *  serializable subset of TConfig; otherwise resolves to a descriptive error
- *  object that the schema literal cannot satisfy, so the package's own
+ *  serializable deep-subset of TConfig; otherwise resolves to a descriptive
+ *  error object that the schema literal cannot satisfy, so the package's own
  *  typecheck fails at its manifest module. This is the drift-breaker: rename
  *  or retype a config key without updating the manifest and `tsc` stops the
  *  package's build. Nested excess keys are the one soft spot (structural
  *  assignability permits them); the conformance suite's runtime deep-key
  *  check covers those. */
 type ValidSettings<S extends TSchema, TConfig> =
-	Static<S> extends Partial<TConfig>
+	Static<S> extends DeepPartial<TConfig>
 		? ExcessKeys<S, TConfig> extends never
 			? unknown
 			: {
