@@ -1,40 +1,60 @@
 import { Value } from '@sinclair/typebox/value';
 import { manifestSchema, serializeManifest } from './schema';
-import type { AnyPackageManifest } from './types';
-import { TOOL_NAME_PATTERN } from './types';
+import { TOOL_NAME_PATTERN, type AnyPackageManifest } from './types';
 
 const MAX_REPORTED_ERRORS = 5;
 
 export type LoadManifestResult =
 	| { ok: true; manifest: AnyPackageManifest }
-	| { ok: false; error: 'manifest_invalid' | 'manifest_missing'; details: string };
+	| {
+			ok: false;
+			error: 'manifest_invalid' | 'manifest_missing';
+			details: string;
+	  };
 
-const validate = (
-	candidate: unknown,
-	source: string
-): LoadManifestResult => {
-	if (candidate === null || typeof candidate !== 'object')
-		return {
-			details: `${source} did not export a manifest object`,
-			error: 'manifest_missing',
-			ok: false
-		};
+/** Shape gate only — schema validation is the real check that follows. */
+const isManifestShaped = (value: unknown): value is AnyPackageManifest =>
+	typeof value === 'object' && value !== null;
 
-	const projected = serializeManifest(candidate as AnyPackageManifest);
+const invalid = (details: string) => {
+	const result: LoadManifestResult = {
+		details,
+		error: 'manifest_invalid',
+		ok: false
+	};
+
+	return result;
+};
+
+const missing = (details: string) => {
+	const result: LoadManifestResult = {
+		details,
+		error: 'manifest_missing',
+		ok: false
+	};
+
+	return result;
+};
+
+const validate = (candidate: unknown, source: string) => {
+	if (!isManifestShaped(candidate))
+		return missing(`${source} did not export a manifest object`);
+
+	const projected = serializeManifest(candidate);
 	if (Value.Check(manifestSchema, projected)) {
 		// TypeBox Record key patterns don't reject non-matching keys, so tool
 		// names are enforced here — same rule the emit CLI applies.
-		const badToolKey = Object.keys(
-			(candidate as AnyPackageManifest).tools ?? {}
-		).find((key) => !TOOL_NAME_PATTERN.test(key));
+		const badToolKey = Object.keys(candidate.tools ?? {}).find(
+			(key) => !TOOL_NAME_PATTERN.test(key)
+		);
 		if (badToolKey !== undefined)
-			return {
-				details: `tool key "${badToolKey}" must match ${TOOL_NAME_PATTERN} (snake_case, no dots — hosts namespace it)`,
-				error: 'manifest_invalid',
-				ok: false
-			};
+			return invalid(
+				`tool key "${badToolKey}" must match ${TOOL_NAME_PATTERN} (snake_case, no dots — hosts namespace it)`
+			);
 
-		return { manifest: candidate as AnyPackageManifest, ok: true };
+		const result: LoadManifestResult = { manifest: candidate, ok: true };
+
+		return result;
 	}
 
 	const details = [...Value.Errors(manifestSchema, projected)]
@@ -42,28 +62,14 @@ const validate = (
 		.map((error) => `${error.path || '/'}: ${error.message}`)
 		.join('; ');
 
-	return { details, error: 'manifest_invalid', ok: false };
-};
-
-/** Validate an already-imported manifest module (`import('<pkg>/manifest')`).
- *  Accepts either the module namespace ({ manifest } named export and/or
- *  default) or the manifest object itself. Never throws — callers surface a
- *  degraded status instead of crashing. */
-export const resolveManifestExport = (moduleOrManifest: unknown): unknown => {
-	if (moduleOrManifest === null || typeof moduleOrManifest !== 'object')
-		return moduleOrManifest;
-	const record = moduleOrManifest as Record<string, unknown>;
-	if ('contract' in record) return record;
-
-	return record.manifest ?? record.default;
+	return invalid(details);
 };
 
 /** Dynamic-import a package's ./manifest subpath and validate it. `specifier`
  *  is normally the bare package name; pass a file URL (optionally with a
- *  cache-busting query) when loading from a specific node_modules tree. */
-export const loadManifest = async (
-	specifier: string
-): Promise<LoadManifestResult> => {
+ *  cache-busting query) when loading from a specific node_modules tree.
+ *  Never throws — callers surface a degraded status instead of crashing. */
+export const loadManifest = async (specifier: string) => {
 	let imported: unknown;
 	try {
 		imported = await import(
@@ -72,17 +78,22 @@ export const loadManifest = async (
 				: `${specifier}/manifest`
 		);
 	} catch (error) {
-		return {
-			details:
-				error instanceof Error ? error.message : String(error),
-			error: 'manifest_missing',
-			ok: false
-		};
+		return missing(error instanceof Error ? error.message : String(error));
 	}
 
 	return validate(resolveManifestExport(imported), specifier);
 };
+/** Unwrap a module namespace ({ manifest } named export and/or default) or
+ *  pass a bare manifest object through. */
+export const resolveManifestExport = (moduleOrManifest: unknown) => {
+	if (typeof moduleOrManifest !== 'object' || moduleOrManifest === null)
+		return moduleOrManifest;
+	if ('contract' in moduleOrManifest) return moduleOrManifest;
 
-/** Validate a manifest object you already hold (no import). */
-export const validateManifest = (candidate: unknown): LoadManifestResult =>
+	return (
+		Reflect.get(moduleOrManifest, 'manifest') ??
+		Reflect.get(moduleOrManifest, 'default')
+	);
+};
+export const validateManifest = (candidate: unknown) =>
 	validate(resolveManifestExport(candidate), 'manifest');

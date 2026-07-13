@@ -15,39 +15,45 @@ import { pathToFileURL } from 'node:url';
 import { Value } from '@sinclair/typebox/value';
 import { resolveManifestExport, validateManifest } from './load';
 import { serializeManifest } from './schema';
-import type { AnyPackageManifest } from './types';
 import { TOOL_NAME_PATTERN } from './types';
 
-const fail = (message: string): never => {
-	console.error(`absolute-manifest: ${message}`);
-	process.exit(1);
+const TAGLINE_MAX_LENGTH = 80;
+
+class CliError extends Error {}
+
+type PackageJsonShape = {
+	name?: string;
+	description?: string;
+	absolutejs?: { manifestContract?: number };
+	exports?: Record<string, unknown>;
 };
 
 const readPackageJson = async (dir: string) => {
 	const path = join(dir, 'package.json');
-	if (!existsSync(path)) fail(`no package.json in ${dir}`);
+	if (!existsSync(path)) throw new CliError(`no package.json in ${dir}`);
+	const parsed: PackageJsonShape = JSON.parse(await readFile(path, 'utf8'));
 
-	return JSON.parse(await readFile(path, 'utf8')) as {
-		name?: string;
-		description?: string;
-		absolutejs?: { manifestContract?: number };
-		exports?: Record<string, unknown>;
-	};
+	return parsed;
 };
 
-const resolveEntry = (cwd: string, explicit?: string): string => {
+const resolveEntry = (cwd: string, explicit?: string) => {
 	if (explicit !== undefined) {
 		const path = resolve(cwd, explicit);
-		if (!existsSync(path)) fail(`entry not found: ${path}`);
+		if (!existsSync(path)) throw new CliError(`entry not found: ${path}`);
 
 		return path;
 	}
-	const candidates = [join(cwd, 'src/manifest.ts'), join(cwd, 'dist/manifest.js')];
+	const candidates = [
+		join(cwd, 'src/manifest.ts'),
+		join(cwd, 'dist/manifest.js')
+	];
 	const found = candidates.find((candidate) => existsSync(candidate));
 	if (found === undefined)
-		fail('no src/manifest.ts or dist/manifest.js found — pass an entry path');
+		throw new CliError(
+			'no src/manifest.ts or dist/manifest.js found — pass an entry path'
+		);
 
-	return found as string;
+	return found;
 };
 
 const emit = async (explicitEntry?: string) => {
@@ -55,15 +61,18 @@ const emit = async (explicitEntry?: string) => {
 	const packageJson = await readPackageJson(cwd);
 	const entry = resolveEntry(cwd, explicitEntry);
 
-	const imported = await import(pathToFileURL(entry).href);
+	const imported: unknown = await import(pathToFileURL(entry).href);
 	const candidate = resolveManifestExport(imported);
 	const result = validateManifest(candidate);
-	if (!result.ok) fail(`${result.error}: ${result.details}`);
+	if (!result.ok) throw new CliError(`${result.error}: ${result.details}`);
 
-	const manifest = (result as { manifest: AnyPackageManifest }).manifest;
+	const { manifest } = result;
 	const problems: string[] = [];
 
-	if (packageJson.name !== undefined && manifest.identity.name !== packageJson.name)
+	if (
+		packageJson.name !== undefined &&
+		manifest.identity.name !== packageJson.name
+	)
 		problems.push(
 			`identity.name "${manifest.identity.name}" does not match package.json name "${packageJson.name}"`
 		);
@@ -79,30 +88,36 @@ const emit = async (explicitEntry?: string) => {
 				`tool key "${toolName}" must match ${TOOL_NAME_PATTERN} (snake_case, no dots — hosts namespace it)`
 			);
 
-	const settingsSchema = manifest.settings as Parameters<typeof Value.Check>[0];
 	for (const preset of manifest.presets ?? [])
-		if (!Value.Check(settingsSchema, preset.values))
-			problems.push(`preset "${preset.id}" values do not satisfy the settings schema`);
+		if (!Value.Check(manifest.settings, preset.values))
+			problems.push(
+				`preset "${preset.id}" values do not satisfy the settings schema`
+			);
 
-	const settingsProperties =
-		(manifest.settings as { properties?: Record<string, { title?: string }> })
-			.properties ?? {};
+	const settingsProperties: Record<string, { title?: string }> =
+		Reflect.get(manifest.settings, 'properties') ?? {};
 	for (const [field, fieldSchema] of Object.entries(settingsProperties))
 		if (fieldSchema.title === undefined)
 			console.warn(
 				`absolute-manifest: warning — settings field "${field}" has no title; no-code UIs will fall back to the raw key`
 			);
 
-	if (problems.length > 0) fail(problems.join('\n  '));
+	if (problems.length > 0) throw new CliError(problems.join('\n  '));
 
 	const outDir = join(cwd, 'dist');
 	await mkdir(outDir, { recursive: true });
 	const outPath = join(outDir, 'manifest.json');
-	await writeFile(outPath, `${JSON.stringify(serializeManifest(manifest), null, '\t')}\n`);
+	await writeFile(
+		outPath,
+		`${JSON.stringify(serializeManifest(manifest), null, '\t')}\n`
+	);
 	console.log(`absolute-manifest: wrote ${outPath}`);
 };
 
-const SCAFFOLD_TEMPLATE = (name: string, description: string) => `import { Type } from '@sinclair/typebox';
+const scaffoldTemplate = (
+	name: string,
+	description: string
+) => `import { Type } from '@sinclair/typebox';
 import { defineManifest } from '@absolutejs/manifest';
 
 // TODO: replace TConfig with this package's real exported options type so the
@@ -114,7 +129,7 @@ export const manifest = defineManifest<TConfig>()({
 	identity: {
 		category: 'infrastructure', // TODO: pick the right category id
 		name: '${name}',
-		tagline: '${description.replaceAll("'", "\\'").slice(0, 80)}' // TODO: one plain-language sentence for site owners
+		tagline: '${description.replaceAll("'", "\\'").slice(0, TAGLINE_MAX_LENGTH)}' // TODO: one plain-language sentence for site owners
 	},
 	settings: Type.Object({}),
 	wiring: [
@@ -129,19 +144,20 @@ export const manifest = defineManifest<TConfig>()({
 		}
 	]
 });
-
-export default manifest;
 `;
 
 const scaffold = async () => {
 	const cwd = process.cwd();
 	const packageJson = await readPackageJson(cwd);
 	const target = join(cwd, 'src/manifest.ts');
-	if (existsSync(target)) fail(`${target} already exists`);
+	if (existsSync(target)) throw new CliError(`${target} already exists`);
 	await mkdir(join(cwd, 'src'), { recursive: true });
 	await writeFile(
 		target,
-		SCAFFOLD_TEMPLATE(packageJson.name ?? 'unnamed', packageJson.description ?? '')
+		scaffoldTemplate(
+			packageJson.name ?? 'unnamed',
+			packageJson.description ?? ''
+		)
 	);
 	console.log(`absolute-manifest: wrote ${target}`);
 	console.log(
@@ -149,7 +165,21 @@ const scaffold = async () => {
 	);
 };
 
-const [, , command, ...rest] = process.argv;
-if (command === 'emit') await emit(rest[0]);
-else if (command === 'scaffold') await scaffold();
-else fail(`unknown command "${command ?? ''}" — use: emit [entry] | scaffold`);
+const run = async () => {
+	const [, , command, ...rest] = process.argv;
+	if (command === 'emit') await emit(rest[0]);
+	else if (command === 'scaffold') await scaffold();
+	else
+		throw new CliError(
+			`unknown command "${command ?? ''}" — use: emit [entry] | scaffold`
+		);
+};
+
+try {
+	await run();
+} catch (error) {
+	console.error(
+		`absolute-manifest: ${error instanceof CliError ? error.message : String(error)}`
+	);
+	process.exit(1);
+}

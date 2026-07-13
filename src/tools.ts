@@ -36,7 +36,7 @@ export const toolFactory = <TRuntime>() => ({
 			runtime: TRuntime
 		) => Promise<string> | string;
 	}): RuntimeTool<TRuntime> =>
-		({ kind: 'runtime', ...definition }) as RuntimeTool<TRuntime>,
+		({ kind: 'runtime', ...definition }),
 
 	workspace: <S extends TSchema>(definition: {
 		description: string;
@@ -47,5 +47,5 @@ export const toolFactory = <TRuntime>() => ({
 			input: Static<S>,
 			workspace: Workspace
 		) => Promise<string> | string;
-	}): WorkspaceTool => ({ kind: 'workspace', ...definition }) as WorkspaceTool
+	}): WorkspaceTool => ({ kind: 'workspace', ...definition })
 });

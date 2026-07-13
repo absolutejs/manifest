@@ -1,6 +1,5 @@
 import { Type } from '@sinclair/typebox';
-import type { AnyPackageManifest } from './types';
-import { TOOL_NAME_PATTERN } from './types';
+import { TOOL_NAME_PATTERN, type AnyPackageManifest } from './types';
 
 /* The manifest's own TypeBox schema — the contract dogfooding itself.
  * It describes the SERIALIZABLE projection of a manifest (tool handlers

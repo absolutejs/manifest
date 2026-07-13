@@ -6,7 +6,13 @@ import { describe, expect, test } from 'bun:test';
 import type { AIToolMap } from '@absolutejs/ai';
 import type { McpToolRegistry } from '@absolutejs/mcp';
 import { Type } from '@sinclair/typebox';
-import { defineManifest, toAIToolMap, toMcpToolRegistry, toolFactory } from '../src/index';
+import {
+	defineManifest,
+	toAIToolMap,
+	toMcpToolRegistry,
+	toolFactory
+} from '../src/index';
+import type { ToolBindings } from '../src/types';
 
 type Runtime = { ping: () => string };
 const tool = toolFactory<Runtime>();
@@ -22,26 +28,26 @@ const manifest = defineManifest<Record<never, never>, Runtime>()({
 	tools: {
 		ping: tool.runtime({
 			description: 'Ping.',
-			handler: (_input, runtime) => runtime.ping(),
-			input: Type.Object({})
+			input: Type.Object({}),
+			handler: (_input, runtime) => runtime.ping()
 		})
 	},
 	wiring: [{ id: 'default', title: 'noop' }]
 });
 
 describe('structural compatibility', () => {
-	const bindings = { runtime: { ping: () => 'pong' } };
+	const bindings: ToolBindings<Runtime> = { runtime: { ping: () => 'pong' } };
 
 	test('toAIToolMap output is assignable to AIToolMap', async () => {
 		const aiTools: AIToolMap = toAIToolMap(manifest, bindings);
-		const ping = aiTools.ping;
+		const {ping} = aiTools;
 		if (ping === undefined) throw new Error('missing tool');
 		expect(await ping.handler({})).toBe('pong');
 	});
 
 	test('toMcpToolRegistry output is assignable to McpToolRegistry', async () => {
 		const mcpTools: McpToolRegistry = toMcpToolRegistry(manifest, bindings);
-		const ping = mcpTools.ping;
+		const {ping} = mcpTools;
 		if (ping === undefined) throw new Error('missing tool');
 		expect(await ping.handler({})).toBe('pong');
 	});

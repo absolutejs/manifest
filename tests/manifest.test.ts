@@ -7,7 +7,7 @@ import {
 	toolFactory,
 	validateManifest
 } from '../src/index';
-import type { PackageManifest, Workspace } from '../src/types';
+import type { Workspace } from '../src/types';
 
 /* A miniature "package" to exercise the whole contract. */
 
@@ -36,28 +36,28 @@ const demoManifest = defineManifest<DemoConfig, DemoRuntime>()({
 		read_notes: tool.workspace({
 			capabilities: ['read'],
 			description: 'Read the notes file.',
+			input: Type.Object({ path: Type.String() }),
 			handler: async (input, workspace) =>
-				(await workspace.read(input.path)) ?? 'missing',
-			input: Type.Object({ path: Type.String() })
+				(await workspace.read(input.path)) ?? 'missing'
 		}),
 		send_greeting: tool.runtime({
 			annotations: { openWorldHint: true },
 			description: 'Send a greeting.',
-			handler: (input, runtime) => runtime.send(input.to),
 			input: Type.Object({
 				count: Type.Integer({ default: 1, minimum: 1 }),
 				to: Type.String()
-			})
+			}),
+			handler: (input, runtime) => runtime.send(input.to)
 		}),
 		write_notes: tool.workspace({
 			capabilities: ['read', 'write'],
 			description: 'Write the notes file.',
+			input: Type.Object({ contents: Type.String(), path: Type.String() }),
 			handler: async (input, workspace) => {
 				await workspace.write?.(input.path, input.contents);
 
 				return 'ok';
-			},
-			input: Type.Object({ contents: Type.String(), path: Type.String() })
+			}
 		})
 	},
 	wiring: [
@@ -124,12 +124,12 @@ describe('validateManifest', () => {
 	});
 
 	test('rejects a manifest with a bad tool key', () => {
-		const bad = {
+		const bad: unknown = {
 			...demoManifest,
 			tools: {
 				'demo.send': demoManifest.tools?.send_greeting
 			}
-		} as unknown as PackageManifest;
+		};
 		const result = validateManifest(bad);
 		expect(result.ok).toBe(false);
 	});
@@ -143,11 +143,11 @@ describe('validateManifest', () => {
 });
 
 describe('bridges', () => {
-	const runtime: DemoRuntime = { send: (to) => `sent to ${to}` };
+	const runtime: DemoRuntime = { send: (recipient) => `sent to ${recipient}` };
 	const files = new Map<string, string>([['notes.txt', 'hello']]);
 	const workspace: Workspace = {
-		read: async (path) => files.get(path) ?? null,
-		root: '/project'
+		root: '/project',
+		read: async (path) => files.get(path) ?? null
 	};
 	const writableWorkspace: Workspace = {
 		...workspace,

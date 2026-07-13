@@ -305,9 +305,8 @@ export type ToolBindings<TRuntime> = {
 
 /* ─── Static helpers ─── */
 
-export type SettingsOf<M> =
-	M extends PackageManifest<infer _TConfig, infer _TRuntime>
-		? M['settings'] extends TSchema
-			? Static<M['settings']>
-			: never
-		: never;
+export type SettingsOf<M> = M extends { settings: infer S }
+	? S extends TSchema
+		? Static<S>
+		: never
+	: never;

@@ -11,6 +11,10 @@ import type {
 
 const MAX_REPORTED_ERRORS = 3;
 
+type CheckedInput =
+	| { ok: true; value: unknown }
+	| { ok: false; message: string };
+
 /** Validate + default the raw args against the tool's schema. Returns the
  *  cleaned value, or an error string the AI/MCP caller can act on. Handlers
  *  never see unvalidated input. */
@@ -18,32 +22,33 @@ const checkInput = (
 	toolName: string,
 	schema: ManifestTool<unknown>['input'],
 	args: unknown
-): { ok: true; value: unknown } | { ok: false; message: string } => {
+) => {
 	const withDefaults = Value.Default(schema, Value.Clone(args ?? {}));
-	if (Value.Check(schema, withDefaults))
-		return { ok: true, value: withDefaults };
+	if (Value.Check(schema, withDefaults)) {
+		const passed: CheckedInput = { ok: true, value: withDefaults };
+
+		return passed;
+	}
 	const errors = [...Value.Errors(schema, withDefaults)]
 		.slice(0, MAX_REPORTED_ERRORS)
 		.map((error) => `${error.path || '/'}: ${error.message}`)
 		.join('; ');
-
-	return {
+	const failed: CheckedInput = {
 		message: `Invalid input for tool "${toolName}": ${errors}`,
 		ok: false
 	};
+
+	return failed;
 };
 
-const hasCapabilities = (
-	tool: ManifestTool<unknown>,
-	workspace: Workspace | undefined
-): workspace is Workspace => {
-	if (tool.kind !== 'workspace') return false;
-	if (workspace === undefined) return false;
-
-	return tool.capabilities.every((capability) =>
-		capability === 'read' ? true : workspace[capability] !== undefined
+const grantsCapabilities = (
+	capabilities: ReadonlyArray<'exec' | 'glob' | 'read' | 'write'>,
+	workspace: Workspace
+) =>
+	capabilities.every(
+		(capability) =>
+			capability === 'read' || workspace[capability] !== undefined
 	);
-};
 
 type BoundTool = {
 	name: string;
@@ -59,34 +64,51 @@ type BoundTool = {
 const bindTools = <TRuntime>(
 	manifest: PackageManifest<never, TRuntime> | AnyPackageManifest,
 	bindings: ToolBindings<TRuntime>
-): ReadonlyArray<BoundTool> =>
-	Object.entries(manifest.tools ?? {}).flatMap(([name, tool]) => {
-		const typed = tool as ManifestTool<TRuntime>;
-		const runnable =
-			typed.kind === 'runtime'
-				? bindings.runtime !== undefined
-				: hasCapabilities(typed, bindings.workspace);
-		if (!runnable) return [];
+) => {
+	const { runtime, workspace } = bindings;
 
-		const invoke = (args: unknown) => {
-			const checked = checkInput(name, typed.input, args);
-			if (!checked.ok) return checked.message;
+	const bindInvoke = (name: string, tool: ManifestTool<TRuntime>) => {
+		if (tool.kind === 'runtime') {
+			if (runtime === undefined) return undefined;
 
-			return typed.kind === 'runtime'
-				? typed.handler(checked.value, bindings.runtime as TRuntime)
-				: typed.handler(checked.value, bindings.workspace as Workspace);
+			return (args: unknown) => {
+				const checked = checkInput(name, tool.input, args);
+
+				return checked.ok
+					? tool.handler(checked.value, runtime)
+					: checked.message;
+			};
+		}
+		if (
+			workspace === undefined ||
+			!grantsCapabilities(tool.capabilities, workspace)
+		)
+			return undefined;
+
+		return (args: unknown) => {
+			const checked = checkInput(name, tool.input, args);
+
+			return checked.ok
+				? tool.handler(checked.value, workspace)
+				: checked.message;
+		};
+	};
+
+	return Object.entries(manifest.tools ?? {}).flatMap(([name, tool]) => {
+		const invoke = bindInvoke(name, tool);
+		if (invoke === undefined) return [];
+
+		const bound: BoundTool = {
+			annotations: tool.annotations,
+			description: tool.description,
+			input: tool.input,
+			invoke,
+			name
 		};
 
-		return [
-			{
-				annotations: typed.annotations,
-				description: typed.description,
-				input: typed.input as unknown as Record<string, unknown>,
-				invoke,
-				name
-			}
-		];
+		return [bound];
 	});
+};
 
 /** Structurally satisfies @absolutejs/ai's AIToolMap — drop the result into
  *  `streamAIToSSE({ tools })`. Consumers running untrusted manifests should
@@ -94,8 +116,8 @@ const bindTools = <TRuntime>(
 export const toAIToolMap = <TRuntime>(
 	manifest: PackageManifest<never, TRuntime> | AnyPackageManifest,
 	bindings: ToolBindings<TRuntime>
-): Record<string, BridgedAITool> =>
-	Object.fromEntries(
+) => {
+	const tools: Record<string, BridgedAITool> = Object.fromEntries(
 		bindTools(manifest, bindings).map((tool) => [
 			tool.name,
 			{
@@ -107,13 +129,16 @@ export const toAIToolMap = <TRuntime>(
 		])
 	);
 
+	return tools;
+};
+
 /** Structurally satisfies @absolutejs/mcp's McpToolRegistry — usable as the
  *  `tools` of an mcpServer config. */
 export const toMcpToolRegistry = <TRuntime>(
 	manifest: PackageManifest<never, TRuntime> | AnyPackageManifest,
 	bindings: ToolBindings<TRuntime>
-): Record<string, BridgedMcpTool> =>
-	Object.fromEntries(
+) => {
+	const tools: Record<string, BridgedMcpTool> = Object.fromEntries(
 		bindTools(manifest, bindings).map((tool) => [
 			tool.name,
 			{
@@ -124,3 +149,6 @@ export const toMcpToolRegistry = <TRuntime>(
 			}
 		])
 	);
+
+	return tools;
+};

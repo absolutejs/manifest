@@ -80,8 +80,6 @@ export const manifest = defineManifest<DispatcherOptions, Dispatcher>()({
 		}
 	]
 });
-
-export default manifest;
 ```
 
 `defineManifest<TConfig, TRuntime>()` is the drift-breaker: the `settings`
