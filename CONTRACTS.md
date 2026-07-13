@@ -18,12 +18,23 @@ installed manifests — publishing a new adapter never requires a core release.
 | `audit/sink` | `@absolutejs/audit` | `AuditSink` | `#memory`, `#console`, `@absolutejs/audit-postgres`, `@absolutejs/audit-s3` |
 | `auth/session-store` | `@absolutejs/auth` | session store | `@absolutejs/auth#postgres`, `@absolutejs/auth#redis` |
 | `blob/store` | `@absolutejs/blob` | `BlobStore` | `@absolutejs/blob#local`, `@absolutejs/blob#s3` |
+| `commerce/email-provider` | `@absolutejs/commerce` | receipt email provider | `@absolutejs/commerce-resend` |
+| `commerce/payment-provider` | `@absolutejs/commerce` | payment provider | `@absolutejs/commerce-stripe` |
+| `commerce/shipping-provider` | `@absolutejs/commerce` | shipping provider | `@absolutejs/commerce-easypost` |
+| `crm/local-entity-store` | `@absolutejs/crm` | local entity store | `#memory`, `#postgres` |
+| `crm/sync-queue` | `@absolutejs/crm` | sync queue | `#memory`, `#postgres` |
+| `crm/token-store` | `@absolutejs/crm` | token store | `#memory`, `#postgres` |
 | `dispatch/email-adapter` | `@absolutejs/dispatch` | `EmailAdapter` | `@absolutejs/dispatch-resend`, `@absolutejs/dispatch-postmark` |
 | `dispatch/push-adapter` | `@absolutejs/dispatch` | `PushAdapter` | — |
+| `discover/dataset-source` | `@absolutejs/discover` | `DatasetSource` | `@absolutejs/dataset-gleif`, `@absolutejs/dataset-sec-edgar`, `@absolutejs/dataset-github` |
 | `dispatch/sms-adapter` | `@absolutejs/dispatch` | `SmsAdapter` | `@absolutejs/dispatch-twilio` |
+| `outcomes/store` | `@absolutejs/outcomes` | outcome store | `#memory` |
+| `rules/store` | `@absolutejs/rules` | rule store | `#memory` |
 | `errors/issue-store` | `@absolutejs/errors` | `IssueStore` | `#memory`, `@absolutejs/errors-postgres` |
 | `logs/sink` | `@absolutejs/logs` | `LogSink` | `#console-json`, `#console-pretty`, `#rotating-file` |
 | `meeting/source` | `@absolutejs/meeting` | meeting source | `#buffer`, `@absolutejs/meeting-recall`, `@absolutejs/meeting-discord` |
+| `metering/sink` | `@absolutejs/metering` | metering sink | `#console` |
+| `onchain/adapters` | `@absolutejs/onchain` | chain adapters | `#local`, `@absolutejs/onchain-base` |
 | `queue/job-store` | `@absolutejs/queue` | `JobStore` | `@absolutejs/queue#memory`, `@absolutejs/queue-postgres`, `@absolutejs/queue-redis` |
 | `rate-limit/algorithm` | `@absolutejs/rate-limit` | rate-limit algorithm | `@absolutejs/rate-limit#gcra`, `#tokenBucket`, `#slidingWindow` |
 | `rate-limit/store` | `@absolutejs/rate-limit` | rate-limit store | `@absolutejs/rate-limit#memoryStore` |
@@ -107,3 +118,28 @@ today, candidates for first-class support in the next contract version:
     arms of a union options type (Deepgram's Conversational|Transcription);
     the implementation pins one arm. Offering both needs two implementations
     of the same factory.
+14. **Factory-map config.** Some config values are factory *symbols*, not
+    instances (crm's `adapters: Partial<Record<Vendor, Factory>>`) — neither
+    slots (instance expressions) nor settings fit. Distinct from #9.
+15. **Instance-valued built-ins.** `AdapterImplementation.factory` says
+    "exported factory symbol", but some built-ins are plain exported
+    instances (metering's `consoleSink`) — the field name lies for that
+    case; wiring code is the bare symbol.
+16. **Multi-factory packages have no shared options type** (pwa's three
+    independent factories) — authors invent a local composite TConfig to
+    keep the drift check. Needs a documented convention or first-class
+    multi-config.
+17. **`${...}` collides with generated template literals** (replay's upload
+    URL) — no escape form; authors emit string concatenation. Candidate:
+    `$${...}` escape in contract 2.
+18. **No lifecycle-only integration shape.** renown (CLI + GitHub Action
+    product) legitimately ships `wiring: []` + lifecycle steps; contract-
+    valid, but consumers expecting a `default` recipe render nothing.
+19. **Injected host-capability functions** (generateObject/embed/search
+    across the intelligence family; mcp's `authorize`) are only expressible
+    as TODO-throwing stubs — the function-shaped sibling of #6.
+20. **Per-call-options packages have no natural TConfig** (rules, outcomes)
+    — authors drift-check against the nearest meaningful type
+    (`RuleFirePolicy`, a `Parameters<>[n]` extract). Undocumented convention.
+21. **d.ts-less packages** (renown is noEmit/bin-only) ship `./manifest`
+    without types; the contract assumes a declarations pipeline.
