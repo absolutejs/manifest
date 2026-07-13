@@ -23,13 +23,20 @@ installed manifests — publishing a new adapter never requires a core release.
 | `dispatch/sms-adapter` | `@absolutejs/dispatch` | `SmsAdapter` | `@absolutejs/dispatch-twilio` |
 | `errors/issue-store` | `@absolutejs/errors` | `IssueStore` | `#memory`, `@absolutejs/errors-postgres` |
 | `logs/sink` | `@absolutejs/logs` | `LogSink` | `#console-json`, `#console-pretty`, `#rotating-file` |
+| `meeting/source` | `@absolutejs/meeting` | meeting source | `#buffer`, `@absolutejs/meeting-recall`, `@absolutejs/meeting-discord` |
 | `queue/job-store` | `@absolutejs/queue` | `JobStore` | `@absolutejs/queue#memory`, `@absolutejs/queue-postgres`, `@absolutejs/queue-redis` |
 | `rate-limit/algorithm` | `@absolutejs/rate-limit` | rate-limit algorithm | `@absolutejs/rate-limit#gcra`, `#tokenBucket`, `#slidingWindow` |
 | `rate-limit/store` | `@absolutejs/rate-limit` | rate-limit store | `@absolutejs/rate-limit#memoryStore` |
 | `secrets/adapter` | `@absolutejs/secrets` | `SecretAdapter` | `#env`, `#memory`, `#encrypted-file` |
-| `rag/vector-store` | `@absolutejs/rag` | `RAGVectorStore` | `@absolutejs/rag-pinecone`, `@absolutejs/rag-postgres`, `@absolutejs/rag-sqlite` |
-| `voice/stt` | `@absolutejs/voice` | STT adapter | `@absolutejs/voice-*` (per vendor) |
-| `voice/tts` | `@absolutejs/voice` | TTS adapter | `@absolutejs/voice-*` (per vendor) |
+| `sync/cluster-bus` | `@absolutejs/sync` | cluster bus | `#memory-bus`, `@absolutejs/sync-bus-pg`, `@absolutejs/sync-bus-redis` |
+| `sync/crdt-adapter` | `@absolutejs/sync` | CRDT adapter | `#rga-text`, `@absolutejs/sync-yjs`, `@absolutejs/sync-automerge`, `@absolutejs/sync-loro` |
+| `rag/embedding-provider` | `@absolutejs/rag` | `RAGEmbeddingProvider` | `#openai`, `#gemini`, `#ollama` |
+| `rag/reranker` | `@absolutejs/rag` | `RAGRerankerProvider` | `#heuristic`, `#cohere`, `#voyage`, `#jina` |
+| `rag/vector-store` | `@absolutejs/rag` | `RAGVectorStore` | `@absolutejs/rag#memory`, `@absolutejs/rag-pinecone`, `@absolutejs/rag-postgres`, `@absolutejs/rag-sqlite` |
+| `voice/realtime` | `@absolutejs/voice` | speech-to-speech adapter | `@absolutejs/voice-gemini`, `@absolutejs/voice-openai` |
+| `voice/session-store` | `@absolutejs/voice` | session store | `#memory`, `#sqlite`, `#postgres`, `#json-file` |
+| `voice/stt` | `@absolutejs/voice` | STT adapter | assemblyai, azure, deepgram, gladia, google-speech, openai-whisper, soniox, speechmatics |
+| `voice/tts` | `@absolutejs/voice` | TTS adapter | azure, cartesia, elevenlabs, lmnt, neets, playht, rime, smallest |
 
 Add a row here when a core package declares a new slot. The conformance suite
 checks that every `slot.known` entry resolves to a published package or a
@@ -83,3 +90,20 @@ today, candidates for first-class support in the next contract version:
    imports.
 8. **`PeerRequirement` has no `optional` flag** and requirements can't be
    scoped to a wiring recipe.
+9. **Method-call and per-field slots.** Some adapters are consumed by a
+   method call or a field map (`engine.connectCluster(bus)`,
+   `registerCrdt(table, {field})`) rather than a config path; `$self` only
+   approximately fits. Candidate: a `$call`-style configPath marker or
+   recipe-scoped slots.
+10. **No recipe dependencies.** A recipe that rides another (sync's
+    collaborative-text rides engine) declares it by comment convention only.
+11. **No feature-pack composition.** Packs that extend a host package
+    (sync-packs) compose by category + binding convention; an
+    `extends`/`packs` field would make pack discovery first-class.
+12. **Optional slots are all-or-nothing per recipe** (no conditional slot
+    lines), and mutually exclusive slot groups (voice's stt+tts XOR realtime)
+    are prose-only. Worked around with named recipe variants.
+13. **Union-typed factory options.** One settings schema can't span both
+    arms of a union options type (Deepgram's Conversational|Transcription);
+    the implementation pins one arm. Offering both needs two implementations
+    of the same factory.
