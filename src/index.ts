@@ -1,6 +1,8 @@
 export { defineImplementation, defineManifest } from './defineManifest';
 export { toolFactory } from './tools';
 export { toAIToolMap, toMcpToolRegistry } from './bridges';
+export { envRequirementsToCredentialCard } from './cards';
+export type { CredentialCardKey, CredentialCardSpec } from './cards';
 export { manifestSchema, serializeManifest } from './schema';
 export {
 	loadManifest,
