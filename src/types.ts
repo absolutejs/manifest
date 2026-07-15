@@ -192,6 +192,44 @@ export type ToolAnnotations = {
 	title?: string;
 };
 
+/** Enforceable policy inputs, not model-facing behavior hints. */
+export type ToolEffect =
+	| 'delete'
+	| 'external-network'
+	| 'purchase'
+	| 'read'
+	| 'send'
+	| 'transfer'
+	| 'write'
+	| (string & {});
+
+export type ToolSpendBinding = {
+	amountMinorField: string;
+	currencyField: string;
+	maximumAmountMinor?: number;
+};
+
+export type ToolAuthorization = {
+	effects: ReadonlyArray<ToolEffect>;
+	requiredScopes?: ReadonlyArray<string>;
+	approval?: 'always' | 'never' | 'policy';
+	idempotencyKeyField?: string;
+	reversible?: boolean;
+	compensatingTool?: string;
+	destinations?: ReadonlyArray<string>;
+	spend?: ToolSpendBinding;
+};
+
+export type ToolAuthorizationRequest = {
+	args: unknown;
+	authorization: ToolAuthorization;
+	toolName: string;
+};
+
+export type ToolAuthorizationResult =
+	| { allowed: true }
+	| { allowed: false; message: string };
+
 /** The capability surface a HOST grants to workspace tools. Hosts implement
  *  it over their own sandbox (jailed root, validated writes, allowlisted
  *  exec); tools declare what they need via `capabilities` and are omitted
@@ -220,6 +258,7 @@ export type RuntimeTool<TRuntime> = {
 	 *  Static<> of it types the handler input. The single source of truth. */
 	input: TSchema;
 	annotations?: ToolAnnotations;
+	authorization?: ToolAuthorization;
 	handler: (input: unknown, runtime: TRuntime) => Promise<string> | string;
 };
 
@@ -230,6 +269,7 @@ export type WorkspaceTool = {
 	description: string;
 	input: TSchema;
 	annotations?: ToolAnnotations;
+	authorization?: ToolAuthorization;
 	capabilities: ReadonlyArray<WorkspaceCapability>;
 	handler: (input: unknown, workspace: Workspace) => Promise<string> | string;
 };
@@ -258,7 +298,7 @@ export type PackageManifest<TConfig = unknown, TRuntime = unknown> = {
 	 *  package. The package's own version is read from its package.json — the
 	 *  manifest ships inside the package, so its version IS the package
 	 *  version. */
-	contract: 1;
+	contract: 1 | 2;
 	identity: ManifestIdentity;
 	requires?: ManifestRequirements;
 	/** TypeBox schema for the SERIALIZABLE subset of the package's config
@@ -288,6 +328,7 @@ export type BridgedAITool = {
 	input: Record<string, unknown>;
 	handler: (input: unknown) => Promise<string> | string;
 	annotations?: ToolAnnotations;
+	authorization?: ToolAuthorization;
 };
 
 /** Structurally satisfies @absolutejs/mcp's McpTool. */
@@ -296,9 +337,13 @@ export type BridgedMcpTool = {
 	inputSchema: Record<string, unknown>;
 	handler: (args: unknown) => Promise<string> | string;
 	annotations?: ToolAnnotations;
+	authorization?: ToolAuthorization;
 };
 
 export type ToolBindings<TRuntime> = {
+	authorize?: (
+		request: ToolAuthorizationRequest
+	) => Promise<ToolAuthorizationResult> | ToolAuthorizationResult;
 	runtime?: TRuntime;
 	workspace?: Workspace;
 };

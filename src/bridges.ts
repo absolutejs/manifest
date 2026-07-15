@@ -55,6 +55,7 @@ type BoundTool = {
 	description: string;
 	input: Record<string, unknown>;
 	annotations?: ManifestTool<unknown>['annotations'];
+	authorization?: ManifestTool<unknown>['authorization'];
 	invoke: (args: unknown) => Promise<string> | string;
 };
 
@@ -65,7 +66,26 @@ const bindTools = <TRuntime>(
 	manifest: PackageManifest<never, TRuntime> | AnyPackageManifest,
 	bindings: ToolBindings<TRuntime>
 ) => {
-	const { runtime, workspace } = bindings;
+	const { authorize, runtime, workspace } = bindings;
+
+	const authorizeInvocation = async (
+		name: string,
+		tool: ManifestTool<TRuntime>,
+		args: unknown,
+		invoke: (args: unknown) => Promise<string> | string
+	) => {
+		const checked = checkInput(name, tool.input, args);
+		if (!checked.ok) return checked.message;
+		if (tool.authorization === undefined) return invoke(checked.value);
+		if (authorize === undefined) return 'Tool authorization is not configured';
+		const result = await authorize({
+			args: checked.value,
+			authorization: tool.authorization,
+			toolName: name
+		});
+
+		return result.allowed ? invoke(checked.value) : result.message;
+	};
 
 	const bindInvoke = (name: string, tool: ManifestTool<TRuntime>) => {
 		if (tool.kind === 'runtime') {
@@ -95,15 +115,17 @@ const bindTools = <TRuntime>(
 	};
 
 	return Object.entries(manifest.tools ?? {}).flatMap(([name, tool]) => {
+		if (tool.authorization !== undefined && authorize === undefined) return [];
 		const invoke = bindInvoke(name, tool);
 		if (invoke === undefined) return [];
 
 		const bound: BoundTool = {
 			annotations: tool.annotations,
+			authorization: tool.authorization,
 			description: tool.description,
 			input: tool.input,
-			invoke,
-			name
+			name,
+			invoke: (args) => authorizeInvocation(name, tool, args, invoke)
 		};
 
 		return [bound];
@@ -122,6 +144,7 @@ export const toAIToolMap = <TRuntime>(
 			tool.name,
 			{
 				annotations: tool.annotations,
+				authorization: tool.authorization,
 				description: tool.description,
 				handler: tool.invoke,
 				input: tool.input
@@ -143,6 +166,7 @@ export const toMcpToolRegistry = <TRuntime>(
 			tool.name,
 			{
 				annotations: tool.annotations,
+				authorization: tool.authorization,
 				description: tool.description,
 				handler: tool.invoke,
 				inputSchema: tool.input

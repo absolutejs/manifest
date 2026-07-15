@@ -206,3 +206,65 @@ describe('bridges', () => {
 		expect(await readNotes.handler({ path: 'notes.txt' })).toBe('hello');
 	});
 });
+
+describe('contract v2 agent authorization', () => {
+	const guardedManifest = defineManifest<Record<never, never>, DemoRuntime>()({
+		contract: 2,
+		identity: {
+			category: 'messaging',
+			name: '@absolutejs/guarded-demo',
+			tagline: 'Exercise enforceable tool metadata.'
+		},
+		settings: Type.Object({}),
+		tools: {
+			send_message: tool.runtime({
+				authorization: {
+					approval: 'policy',
+					destinations: ['email'],
+					effects: ['send', 'external-network'],
+					requiredScopes: ['messages:send']
+				},
+				description: 'Send a message.',
+				input: Type.Object({ to: Type.String() }),
+				handler: ({ to: recipient }, runtime) => runtime.send(recipient)
+			})
+		},
+		wiring: [{ id: 'default', title: 'noop' }]
+	});
+
+	test('serializes and validates semantic effects', () => {
+		expect(validateManifest(guardedManifest).ok).toBe(true);
+	});
+
+	test('rejects authorization metadata mislabeled as contract v1', () => {
+		expect(validateManifest({ ...guardedManifest, contract: 1 }).ok).toBe(false);
+	});
+
+	test('fails closed when no authorization binding exists', () => {
+		const tools = toAIToolMap(guardedManifest, {
+			runtime: { send: (recipient) => `sent to ${recipient}` }
+		});
+		expect(tools.send_message).toBeUndefined();
+	});
+
+	test('enforces policy before dispatching', async () => {
+		let called = false;
+		const tools = toMcpToolRegistry(guardedManifest, {
+			runtime: {
+				send: () => {
+					called = true;
+
+					return 'sent';
+				}
+			},
+			authorize: ({ authorization }) =>
+				authorization.effects.includes('send')
+					? { allowed: false, message: 'approval_required' }
+					: { allowed: true }
+		});
+		expect(await tools.send_message?.handler({ to: 'sam' })).toBe(
+			'approval_required'
+		);
+		expect(called).toBe(false);
+	});
+});

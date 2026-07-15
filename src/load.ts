@@ -42,6 +42,15 @@ const validate = (candidate: unknown, source: string) => {
 
 	const projected = serializeManifest(candidate);
 	if (Value.Check(manifestSchema, projected)) {
+		if (
+			candidate.contract === 1 &&
+			Object.values(candidate.tools ?? {}).some(
+				(tool) => tool.authorization !== undefined
+			)
+		)
+			return invalid(
+				'tool authorization metadata requires manifest contract 2'
+			);
 		// TypeBox Record key patterns don't reject non-matching keys, so tool
 		// names are enforced here — same rule the emit CLI applies.
 		const badToolKey = Object.keys(candidate.tools ?? {}).find(

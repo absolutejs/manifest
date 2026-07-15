@@ -1,5 +1,28 @@
 # @absolutejs/manifest
 
+## Agent action authorization (contract 2)
+
+Contract 2 adds semantic tool effects and enforcement requirements. These are
+policy inputs, not model hints:
+
+```ts
+send_email: tool.runtime({
+	authorization: {
+		approval: 'policy',
+		destinations: ['email'],
+		effects: ['send', 'external-network'],
+		idempotencyKeyField: 'idempotencyKey',
+		requiredScopes: ['email:send']
+	},
+	// input, handler, description…
+})
+```
+
+Bridges fail closed: guarded tools are omitted unless the host supplies a
+`ToolBindings.authorize` policy-enforcement callback. The callback receives
+validated and defaulted arguments before the handler runs. Contract 1 remains
+supported unchanged, but cannot carry authorization metadata.
+
 The AbsoluteJS package manifest contract. Every `@absolutejs/*` package
 exports a typed manifest from its `./manifest` subpath describing what the
 package is, what it needs, how it wires into an app, and what AI tools it

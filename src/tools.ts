@@ -2,6 +2,7 @@ import type { Static, TSchema } from '@sinclair/typebox';
 import type {
 	RuntimeTool,
 	ToolAnnotations,
+	ToolAuthorization,
 	Workspace,
 	WorkspaceCapability,
 	WorkspaceTool
@@ -31,6 +32,7 @@ export const toolFactory = <TRuntime>() => ({
 		description: string;
 		input: S;
 		annotations?: ToolAnnotations;
+		authorization?: ToolAuthorization;
 		handler: (
 			input: Static<S>,
 			runtime: TRuntime
@@ -42,6 +44,7 @@ export const toolFactory = <TRuntime>() => ({
 		description: string;
 		input: S;
 		annotations?: ToolAnnotations;
+		authorization?: ToolAuthorization;
 		capabilities: ReadonlyArray<WorkspaceCapability>;
 		handler: (
 			input: Static<S>,

@@ -120,8 +120,34 @@ const toolAnnotations = Type.Object({
 	title: Type.Optional(Type.String())
 });
 
+const toolAuthorization = Type.Object({
+	approval: Type.Optional(
+		Type.Union([
+			Type.Literal('always'),
+			Type.Literal('never'),
+			Type.Literal('policy')
+		])
+	),
+	compensatingTool: Type.Optional(
+		Type.String({ pattern: TOOL_NAME_PATTERN.source })
+	),
+	destinations: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+	effects: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
+	idempotencyKeyField: Type.Optional(Type.String({ minLength: 1 })),
+	requiredScopes: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+	reversible: Type.Optional(Type.Boolean()),
+	spend: Type.Optional(
+		Type.Object({
+			amountMinorField: Type.String({ minLength: 1 }),
+			currencyField: Type.String({ minLength: 1 }),
+			maximumAmountMinor: Type.Optional(Type.Integer({ minimum: 0 }))
+		})
+	)
+});
+
 const serializedTool = Type.Object({
 	annotations: Type.Optional(toolAnnotations),
+	authorization: Type.Optional(toolAuthorization),
 	capabilities: Type.Optional(
 		Type.Array(
 			Type.Union([
@@ -138,7 +164,7 @@ const serializedTool = Type.Object({
 });
 
 export const manifestSchema = Type.Object({
-	contract: Type.Literal(1),
+	contract: Type.Union([Type.Literal(1), Type.Literal(2)]),
 	identity: Type.Object({
 		accent: Type.Optional(Type.String({ pattern: '^#[0-9a-fA-F]{3,8}$' })),
 		category: Type.String({ minLength: 1 }),
@@ -195,6 +221,9 @@ export const serializeManifest = (
 								...(tool.annotations === undefined
 									? {}
 									: { annotations: tool.annotations }),
+								...(tool.authorization === undefined
+									? {}
+									: { authorization: tool.authorization }),
 								...(tool.kind === 'workspace'
 									? { capabilities: tool.capabilities }
 									: {}),
