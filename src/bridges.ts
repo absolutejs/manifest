@@ -167,6 +167,7 @@ export const toMcpToolRegistry = <TRuntime>(
 			{
 				annotations: tool.annotations,
 				authorization: tool.authorization,
+				...('x-coaz-mapping' in tool.input ? { coaz: true as const } : {}),
 				description: tool.description,
 				handler: tool.invoke,
 				inputSchema: tool.input

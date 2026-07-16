@@ -165,6 +165,16 @@ const serializedTool = Type.Object({
 
 export const manifestSchema = Type.Object({
 	contract: Type.Union([Type.Literal(1), Type.Literal(2)]),
+	discovery: Type.Optional(
+		Type.Object({
+			audiences: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+			certificationUrl: Type.Optional(Type.String()),
+			intents: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+			keywords: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+			protocols: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+			url: Type.Optional(Type.String())
+		})
+	),
 	identity: Type.Object({
 		accent: Type.Optional(Type.String({ pattern: '^#[0-9a-fA-F]{3,8}$' })),
 		category: Type.String({ minLength: 1 }),

@@ -2,6 +2,15 @@ export { defineImplementation, defineManifest } from './defineManifest';
 export { toolFactory } from './tools';
 export { toAIToolMap, toMcpToolRegistry } from './bridges';
 export { envRequirementsToCredentialCard } from './cards';
+export {
+	manifestToAgentCatalogEntry,
+	manifestsToAgentCatalogJsonLd,
+	manifestsToAgentsText
+} from './discovery';
+export type {
+	DiscoverableManifest,
+	ManifestAgentCatalogEntry
+} from './discovery';
 export type { CredentialCardKey, CredentialCardSpec } from './cards';
 export { manifestSchema, serializeManifest } from './schema';
 export {
@@ -22,6 +31,7 @@ export type {
 	LifecycleStep,
 	ManifestCategory,
 	ManifestIdentity,
+	ManifestDiscovery,
 	ManifestRequirements,
 	ManifestTool,
 	PackageManifest,

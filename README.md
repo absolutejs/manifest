@@ -1,5 +1,12 @@
 # @absolutejs/manifest
 
+Contract 0.3 adds search-first discovery. Any package manifest can be projected
+to a deterministic JSON-LD capability catalog and a compact `agents.txt`
+surface. Entries index intents, tools, effects, scopes, adapter contracts,
+protocols, docs, and signed certification URLs. MCP bridges also advertise the
+OpenID AuthZEN `coaz` marker whenever a tool schema declares
+`x-coaz-mapping`.
+
 ## Agent action authorization (contract 2)
 
 Contract 2 adds semantic tool effects and enforcement requirements. These are

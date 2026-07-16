@@ -41,6 +41,18 @@ export type ManifestIdentity = {
 	docsUrl?: string;
 };
 
+/** Search and protocol hints used to publish package-level agent catalogs. */
+export type ManifestDiscovery = {
+	keywords?: ReadonlyArray<string>;
+	intents?: ReadonlyArray<string>;
+	protocols?: ReadonlyArray<string>;
+	audiences?: ReadonlyArray<string>;
+	/** Stable public URL for the package's catalog entry, when hosted. */
+	url?: string;
+	/** URL of a signed conformance certificate. */
+	certificationUrl?: string;
+};
+
 /* ─── Requirements ─── */
 
 export type EnvRequirement = {
@@ -300,6 +312,7 @@ export type PackageManifest<TConfig = unknown, TRuntime = unknown> = {
 	 *  version. */
 	contract: 1 | 2;
 	identity: ManifestIdentity;
+	discovery?: ManifestDiscovery;
 	requires?: ManifestRequirements;
 	/** TypeBox schema for the SERIALIZABLE subset of the package's config
 	 *  type. Function-valued config (callbacks, store instances) is expressed
@@ -338,6 +351,8 @@ export type BridgedMcpTool = {
 	handler: (args: unknown) => Promise<string> | string;
 	annotations?: ToolAnnotations;
 	authorization?: ToolAuthorization;
+	/** OpenID AuthZEN COAZ marker when inputSchema carries x-coaz-mapping. */
+	coaz?: true;
 };
 
 export type ToolBindings<TRuntime> = {
