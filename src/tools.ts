@@ -1,12 +1,33 @@
-import type { Static, TSchema } from '@sinclair/typebox';
+import type { Static, TSchema } from "@sinclair/typebox";
 import type {
-	RuntimeTool,
-	ToolAnnotations,
-	ToolAuthorization,
-	Workspace,
-	WorkspaceCapability,
-	WorkspaceTool
-} from './types';
+  AuthorizedRuntimeTool,
+  AuthorizedWorkspaceTool,
+  LegacyRuntimeTool,
+  LegacyWorkspaceTool,
+  ToolAnnotations,
+  ToolAuthorization,
+  Workspace,
+  WorkspaceCapability,
+} from "./types";
+
+const literal = <Value extends string>(value: Value) => value;
+const RUNTIME_KIND = literal("runtime");
+const WORKSPACE_KIND = literal("workspace");
+
+type RuntimeToolDefinition<S extends TSchema, TRuntime> = {
+  description: string;
+  input: S;
+  annotations?: ToolAnnotations;
+  handler: (input: Static<S>, runtime: TRuntime) => Promise<string> | string;
+};
+
+type WorkspaceToolDefinition<S extends TSchema> = {
+  description: string;
+  input: S;
+  annotations?: ToolAnnotations;
+  capabilities: ReadonlyArray<WorkspaceCapability>;
+  handler: (input: Static<S>, workspace: Workspace) => Promise<string> | string;
+};
 
 /** Per-tool generic inference: the input schema types the handler's first
  *  parameter (`Static<S>`); TRuntime is fixed once by the curried factory.
@@ -27,28 +48,42 @@ import type {
  *  });
  *  ```
  */
-export const toolFactory = <TRuntime>() => ({
-	runtime: <S extends TSchema>(definition: {
-		description: string;
-		input: S;
-		annotations?: ToolAnnotations;
-		authorization?: ToolAuthorization;
-		handler: (
-			input: Static<S>,
-			runtime: TRuntime
-		) => Promise<string> | string;
-	}): RuntimeTool<TRuntime> =>
-		({ kind: 'runtime', ...definition }),
+export const toolFactory = <TRuntime>() => {
+  function runtime<S extends TSchema>(
+    definition: RuntimeToolDefinition<S, TRuntime> & {
+      authorization: ToolAuthorization;
+    },
+  ): AuthorizedRuntimeTool<TRuntime>;
+  function runtime<S extends TSchema>(
+    definition: RuntimeToolDefinition<S, TRuntime> & {
+      authorization?: never;
+    },
+  ): LegacyRuntimeTool<TRuntime>;
+  function runtime<S extends TSchema>(
+    definition: RuntimeToolDefinition<S, TRuntime> & {
+      authorization?: ToolAuthorization;
+    },
+  ) {
+    return { kind: RUNTIME_KIND, ...definition };
+  }
 
-	workspace: <S extends TSchema>(definition: {
-		description: string;
-		input: S;
-		annotations?: ToolAnnotations;
-		authorization?: ToolAuthorization;
-		capabilities: ReadonlyArray<WorkspaceCapability>;
-		handler: (
-			input: Static<S>,
-			workspace: Workspace
-		) => Promise<string> | string;
-	}): WorkspaceTool => ({ kind: 'workspace', ...definition })
-});
+  function workspace<S extends TSchema>(
+    definition: WorkspaceToolDefinition<S> & {
+      authorization: ToolAuthorization;
+    },
+  ): AuthorizedWorkspaceTool;
+  function workspace<S extends TSchema>(
+    definition: WorkspaceToolDefinition<S> & {
+      authorization?: never;
+    },
+  ): LegacyWorkspaceTool;
+  function workspace<S extends TSchema>(
+    definition: WorkspaceToolDefinition<S> & {
+      authorization?: ToolAuthorization;
+    },
+  ) {
+    return { kind: WORKSPACE_KIND, ...definition };
+  }
+
+  return { runtime, workspace };
+};

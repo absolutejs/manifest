@@ -1,11 +1,10 @@
 # @absolutejs/manifest
 
-Contract 0.3 adds search-first discovery. Any package manifest can be projected
-to a deterministic JSON-LD capability catalog and a compact `agents.txt`
-surface. Entries index intents, tools, effects, scopes, adapter contracts,
-protocols, docs, and signed certification URLs. MCP bridges also advertise the
-OpenID AuthZEN `coaz` marker whenever a tool schema declares
-`x-coaz-mapping`.
+Version 0.4 makes remote tools secure by construction. Contract-2 manifests
+declare enough policy metadata for a host or no-code control plane to explain,
+approve, lease, execute, audit, and where possible compensate every action.
+Contract-1 manifests still load for catalog and upgrade tooling, but their tools
+are deliberately omitted from AI and MCP bridges.
 
 ## Agent action authorization (contract 2)
 
@@ -14,21 +13,32 @@ policy inputs, not model hints:
 
 ```ts
 send_email: tool.runtime({
-	authorization: {
-		approval: 'policy',
-		destinations: ['email'],
-		effects: ['send', 'external-network'],
-		idempotencyKeyField: 'idempotencyKey',
-		requiredScopes: ['email:send']
-	},
-	// input, handler, description…
-})
+  authorization: {
+    approval: "policy",
+    audience: "owner",
+    destinationFields: ["to"],
+    effects: ["send", "external-network"],
+    idempotency: { mode: "host" },
+    requiredScopes: ["email:send"],
+    reversible: false,
+  },
+  // input, handler, description…
+});
 ```
 
-Bridges fail closed: guarded tools are omitted unless the host supplies a
-`ToolBindings.authorize` policy-enforcement callback. The callback receives
-validated and defaulted arguments before the handler runs. Contract 1 remains
-supported unchanged, but cannot carry authorization metadata.
+Bridges fail closed: tools are omitted unless the manifest is contract 2, the
+tool has valid authorization metadata, its runtime or workspace capabilities
+are available, and the host supplies `ToolBindings.enforce`. The enforcer gets
+deep-frozen, validated, defaulted arguments, their canonical SHA-256 digest,
+the package/tool identity, and a single-use execution closure. The closure
+expires when enforcement returns, closing the approve-now/execute-different-
+input gap. A host can wrap approval, authorization, idempotency leasing,
+execution, and receipt recording around that exact closure.
+
+`inspectManifestSecurity` returns per-tool posture and actionable issue codes
+for catalogs and no-code UIs. It checks scopes, public exposure, destinations,
+resource and spend bindings, idempotency, reversibility/compensation,
+destructive hints, read-only hints, and every referenced input field.
 
 The AbsoluteJS package manifest contract. Every `@absolutejs/*` package
 exports a typed manifest from its `./manifest` subpath describing what the
@@ -53,62 +63,73 @@ hand-written JSON Schema, no drift.
 
 ```ts
 // src/manifest.ts of @absolutejs/dispatch
-import { Type } from '@sinclair/typebox';
-import { defineManifest, toolFactory } from '@absolutejs/manifest';
-import type { Dispatcher, DispatcherOptions } from './types';
+import { Type } from "@sinclair/typebox";
+import { defineManifest, toolFactory } from "@absolutejs/manifest";
+import type { Dispatcher, DispatcherOptions } from "./types";
 
 const tool = toolFactory<Dispatcher>();
 
 export const manifest = defineManifest<DispatcherOptions, Dispatcher>()({
-	contract: 1,
-	identity: {
-		category: 'messaging',
-		name: '@absolutejs/dispatch',
-		tagline: 'Send email, texts, and push notifications from your site.'
-	},
-	settings: Type.Object({
-		defaultFrom: Type.Optional(
-			Type.Object(
-				{ email: Type.Optional(Type.String({ format: 'email' })) },
-				{ title: 'Default sender' }
-			)
-		)
-	}),
-	slots: {
-		email: {
-			configPath: 'email',
-			contract: 'dispatch/email-adapter',
-			description: 'Email transport',
-			known: ['@absolutejs/dispatch-resend', '@absolutejs/dispatch-postmark']
-		}
-	},
-	tools: {
-		send_email: tool.runtime({
-			annotations: { openWorldHint: true },
-			description: 'Send a transactional email through the configured adapter.',
-			handler: async (input, dispatcher) => {
-				const result = await dispatcher.email(input);
+  contract: 2,
+  identity: {
+    category: "messaging",
+    name: "@absolutejs/dispatch",
+    tagline: "Send email, texts, and push notifications from your site.",
+  },
+  settings: Type.Object({
+    defaultFrom: Type.Optional(
+      Type.Object(
+        { email: Type.Optional(Type.String({ format: "email" })) },
+        { title: "Default sender" },
+      ),
+    ),
+  }),
+  slots: {
+    email: {
+      configPath: "email",
+      contract: "dispatch/email-adapter",
+      description: "Email transport",
+      known: ["@absolutejs/dispatch-resend", "@absolutejs/dispatch-postmark"],
+    },
+  },
+  tools: {
+    send_email: tool.runtime({
+      annotations: { openWorldHint: true },
+      authorization: {
+        approval: "policy",
+        audience: "owner",
+        destinationFields: ["to"],
+        effects: ["send", "external-network"],
+        idempotency: { mode: "host" },
+        requiredScopes: ["email:send"],
+        reversible: false,
+      },
+      description: "Send a transactional email through the configured adapter.",
+      handler: async (input, dispatcher) => {
+        const result = await dispatcher.email(input);
 
-				return `sent via ${result.provider}`;
-			},
-			input: Type.Object({
-				subject: Type.String(),
-				text: Type.String(),
-				to: Type.String({ format: 'email' })
-			})
-		})
-	},
-	wiring: [
-		{
-			id: 'default',
-			server: {
-				code: 'const dispatcher = createDispatcher({ email: ${slot.email}, ...${settings} });',
-				imports: [{ from: '@absolutejs/dispatch', names: ['createDispatcher'] }],
-				placement: 'module-scope'
-			},
-			title: 'Create the dispatcher'
-		}
-	]
+        return `sent via ${result.provider}`;
+      },
+      input: Type.Object({
+        subject: Type.String(),
+        text: Type.String(),
+        to: Type.String({ format: "email" }),
+      }),
+    }),
+  },
+  wiring: [
+    {
+      id: "default",
+      server: {
+        code: "const dispatcher = createDispatcher({ email: ${slot.email}, ...${settings} });",
+        imports: [
+          { from: "@absolutejs/dispatch", names: ["createDispatcher"] },
+        ],
+        placement: "module-scope",
+      },
+      title: "Create the dispatcher",
+    },
+  ],
 });
 ```
 
@@ -123,17 +144,17 @@ types live.
 ```jsonc
 // package.json
 {
-	"absolutejs": { "manifestContract": 1 },
-	"exports": {
-		"./manifest": {
-			"types": "./dist/manifest.d.ts",
-			"import": "./dist/manifest.js"
-		},
-		"./manifest.json": "./dist/manifest.json"
-	},
-	"scripts": {
-		"build": "… && absolute-manifest emit"
-	}
+  "absolutejs": { "manifestContract": 2 },
+  "exports": {
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "import": "./dist/manifest.js",
+    },
+    "./manifest.json": "./dist/manifest.json",
+  },
+  "scripts": {
+    "build": "… && absolute-manifest emit",
+  },
 }
 ```
 
@@ -152,20 +173,26 @@ const result = await loadManifest('@absolutejs/dispatch');
 if (!result.ok) throw new Error(result.details);
 
 // AI tool loop (@absolutejs/ai)
-const tools = toAIToolMap(result.manifest, { runtime: dispatcher });
+const enforce = async (request, execute) => {
+	await agency.authorizeAndLease(request);
+	const toolResult = await execute();
+	await agency.recordReceipt(request, toolResult);
+
+	return toolResult;
+};
+const tools = toAIToolMap(result.manifest, { enforce, runtime: dispatcher });
 streamAIToSSE({ tools, ... });
 
 // Remote MCP server (@absolutejs/mcp)
 new Elysia().use(mcpServer({
 	path: '/mcp',
-	tools: () => toMcpToolRegistry(result.manifest, { runtime: dispatcher })
+	tools: () => toMcpToolRegistry(result.manifest, { enforce, runtime: dispatcher })
 }));
 ```
 
-Bridges validate every call's input against the tool's schema before the
-handler runs (`Value.Default` + `Value.Check`), and **fail closed**: a
-`runtime` tool without a runtime binding, or a `workspace` tool needing a
-capability the host didn't grant, is omitted from the registry entirely.
+Bridges validate and default every call before enforcement and **fail closed**.
+Contract-1 tools, unguarded tools, missing runtimes, unavailable workspace
+capabilities, and hosts without an enforcer never appear in the registry.
 
 Handlers receive nothing ambient — no `process.env`, no host secrets. A
 `runtime` tool gets the package instance the host constructed; a `workspace`

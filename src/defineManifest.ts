@@ -1,9 +1,14 @@
-import type { Static, TSchema } from '@sinclair/typebox';
-import type { AdapterImplementation, PackageManifest } from './types';
+import type { Static, TSchema } from "@sinclair/typebox";
+import type {
+  AdapterImplementation,
+  AuthorizedManifestTool,
+  LegacyManifestTool,
+  PackageManifest,
+} from "./types";
 
 type ExcessKeys<S extends TSchema, TConfig> = Exclude<
-	keyof Static<S>,
-	keyof TConfig
+  keyof Static<S>,
+  keyof TConfig
 >;
 
 /** Every property optional, recursively; functions and arrays pass through.
@@ -15,12 +20,12 @@ type ExcessKeys<S extends TSchema, TConfig> = Exclude<
  *  still caught; only nested requiredness is relaxed — the conformance
  *  suite's runtime deep-key check covers that. */
 type DeepPartial<T> = T extends (...args: never[]) => unknown
-	? T
-	: T extends ReadonlyArray<infer U>
-		? ReadonlyArray<DeepPartial<U>>
-		: T extends object
-			? { [K in keyof T]?: DeepPartial<T[K]> }
-			: T;
+  ? T
+  : T extends ReadonlyArray<infer U>
+    ? ReadonlyArray<DeepPartial<U>>
+    : T extends object
+      ? { [K in keyof T]?: DeepPartial<T[K]> }
+      : T;
 
 /** Resolves to `unknown` (intersection no-op) when the schema is a valid
  *  serializable deep-subset of TConfig; otherwise resolves to a descriptive
@@ -31,25 +36,25 @@ type DeepPartial<T> = T extends (...args: never[]) => unknown
  *  assignability permits them); the conformance suite's runtime deep-key
  *  check covers those. */
 type ValidSettings<S extends TSchema, TConfig> =
-	Static<S> extends DeepPartial<TConfig>
-		? ExcessKeys<S, TConfig> extends never
-			? unknown
-			: {
-					'settings schema declares keys that do not exist on the config type': ExcessKeys<
-						S,
-						TConfig
-					>;
-				}
-		: {
-				'settings schema values are not assignable to the config type — check nested shapes': true;
-			};
+  Static<S> extends DeepPartial<TConfig>
+    ? ExcessKeys<S, TConfig> extends never
+      ? unknown
+      : {
+          "settings schema declares keys that do not exist on the config type": ExcessKeys<
+            S,
+            TConfig
+          >;
+        }
+    : {
+        "settings schema values are not assignable to the config type — check nested shapes": true;
+      };
 
 /** Curried so TConfig/TRuntime are explicit while the settings schema is
  *  inferred — TypeScript has no partial inference in a single call.
  *
  *  ```ts
  *  export const manifest = defineManifest<DispatcherOptions, Dispatcher>()({
- *  	contract: 1,
+ *  	contract: 2,
  *  	identity: { ... },
  *  	settings: Type.Object({ ... }),  // checked against DispatcherOptions
  *  	wiring: [ ... ]
@@ -57,24 +62,34 @@ type ValidSettings<S extends TSchema, TConfig> =
  *  ```
  */
 export const defineImplementation =
-	<TOptions>() =>
-	<S extends TSchema>(
-		implementation: Omit<AdapterImplementation, 'settings'> & {
-			settings?: S & ValidSettings<S, TOptions>;
-		}
-	) => {
-		const defined: AdapterImplementation = implementation;
+  <TOptions>() =>
+  <S extends TSchema>(
+    implementation: Omit<AdapterImplementation, "settings"> & {
+      settings?: S & ValidSettings<S, TOptions>;
+    },
+  ) => {
+    const defined: AdapterImplementation = implementation;
 
-		return defined;
-	};
+    return defined;
+  };
 export const defineManifest =
-	<TConfig, TRuntime = never>() =>
-	<S extends TSchema>(
-		manifest: Omit<PackageManifest<TConfig, TRuntime>, 'settings'> & {
-			settings: S & ValidSettings<S, TConfig>;
-		}
-	) => {
-		const defined: PackageManifest<TConfig, TRuntime> = manifest;
-
-		return defined;
-	};
+  <TConfig, TRuntime = never>() =>
+  <S extends TSchema>(
+    manifest: Omit<
+      PackageManifest<TConfig, TRuntime>,
+      "contract" | "settings" | "tools"
+    > &
+      (
+        | {
+            contract: 1;
+            tools?: Record<string, LegacyManifestTool<TRuntime>>;
+          }
+        | {
+            contract: 2;
+            tools?: Record<string, AuthorizedManifestTool<TRuntime>>;
+          }
+      ) & {
+        settings: S & ValidSettings<S, TConfig>;
+      },
+  ) =>
+    manifest;

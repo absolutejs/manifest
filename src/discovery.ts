@@ -7,6 +7,7 @@ import type {
 } from "./types";
 
 export type DiscoverableManifest = {
+  contract: 1 | 2;
   identity: ManifestIdentity;
   discovery?: ManifestDiscovery;
   slots?: Record<string, AdapterSlot>;
@@ -34,10 +35,16 @@ export type ManifestAgentCatalogEntry = {
   protocols: string[];
   contracts: string[];
   tools: Array<{
+    approval: ToolAuthorization["approval"] | null;
+    audience: ToolAuthorization["audience"] | null;
     name: string;
     description: string;
+    destinations: string[];
     effects: string[];
+    idempotency: ToolAuthorization["idempotency"] | null;
     requiredScopes: string[];
+    resourceType: string | null;
+    reversible: boolean | null;
     coaz: boolean;
   }>;
   certificationUrl?: string;
@@ -49,8 +56,14 @@ const words = (value: string) =>
     .split(/[^a-z0-9@._/-]+/u)
     .filter((item) => item.length > 1);
 const authorization = (value: ToolAuthorization | undefined) => ({
+  approval: value?.approval ?? null,
+  audience: value?.audience ?? null,
+  destinations: [...(value?.destinations ?? [])],
   effects: [...(value?.effects ?? [])],
+  idempotency: value?.idempotency ?? null,
   requiredScopes: [...(value?.requiredScopes ?? [])],
+  resourceType: value?.resource?.type ?? null,
+  reversible: value?.reversible ?? null,
 });
 
 /** Deterministic package capability entry for registries, search, and RAG. */

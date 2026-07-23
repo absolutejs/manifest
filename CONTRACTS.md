@@ -13,41 +13,41 @@ installed manifests — publishing a new adapter never requires a core release.
 
 ## Reserved contract ids
 
-| Contract id | Core package | Contract type | Known implementations |
-| --- | --- | --- | --- |
-| `audit/sink` | `@absolutejs/audit` | `AuditSink` | `#memory`, `#console`, `@absolutejs/audit-postgres`, `@absolutejs/audit-s3` |
-| `auth/session-store` | `@absolutejs/auth` | session store | `@absolutejs/auth#postgres`, `@absolutejs/auth#redis` |
-| `blob/store` | `@absolutejs/blob` | `BlobStore` | `@absolutejs/blob#local`, `@absolutejs/blob#s3` |
-| `commerce/email-provider` | `@absolutejs/commerce` | receipt email provider | `@absolutejs/commerce-resend` |
-| `commerce/payment-provider` | `@absolutejs/commerce` | payment provider | `@absolutejs/commerce-stripe` |
-| `commerce/shipping-provider` | `@absolutejs/commerce` | shipping provider | `@absolutejs/commerce-easypost` |
-| `crm/local-entity-store` | `@absolutejs/crm` | local entity store | `#memory`, `#postgres` |
-| `crm/sync-queue` | `@absolutejs/crm` | sync queue | `#memory`, `#postgres` |
-| `crm/token-store` | `@absolutejs/crm` | token store | `#memory`, `#postgres` |
-| `dispatch/email-adapter` | `@absolutejs/dispatch` | `EmailAdapter` | `@absolutejs/dispatch-resend`, `@absolutejs/dispatch-postmark` |
-| `dispatch/push-adapter` | `@absolutejs/dispatch` | `PushAdapter` | — |
-| `discover/dataset-source` | `@absolutejs/discover` | `DatasetSource` | `@absolutejs/dataset-gleif`, `@absolutejs/dataset-sec-edgar`, `@absolutejs/dataset-github` |
-| `dispatch/sms-adapter` | `@absolutejs/dispatch` | `SmsAdapter` | `@absolutejs/dispatch-twilio` |
-| `outcomes/store` | `@absolutejs/outcomes` | outcome store | `#memory` |
-| `rules/store` | `@absolutejs/rules` | rule store | `#memory` |
-| `errors/issue-store` | `@absolutejs/errors` | `IssueStore` | `#memory`, `@absolutejs/errors-postgres` |
-| `logs/sink` | `@absolutejs/logs` | `LogSink` | `#console-json`, `#console-pretty`, `#rotating-file` |
-| `meeting/source` | `@absolutejs/meeting` | meeting source | `#buffer`, `@absolutejs/meeting-recall`, `@absolutejs/meeting-discord` |
-| `metering/sink` | `@absolutejs/metering` | metering sink | `#console` |
-| `onchain/adapters` | `@absolutejs/onchain` | chain adapters | `#local`, `@absolutejs/onchain-base` |
-| `queue/job-store` | `@absolutejs/queue` | `JobStore` | `@absolutejs/queue#memory`, `@absolutejs/queue-postgres`, `@absolutejs/queue-redis` |
-| `rate-limit/algorithm` | `@absolutejs/rate-limit` | rate-limit algorithm | `@absolutejs/rate-limit#gcra`, `#tokenBucket`, `#slidingWindow` |
-| `rate-limit/store` | `@absolutejs/rate-limit` | rate-limit store | `@absolutejs/rate-limit#memoryStore` |
-| `secrets/adapter` | `@absolutejs/secrets` | `SecretAdapter` | `#env`, `#memory`, `#encrypted-file` |
-| `sync/cluster-bus` | `@absolutejs/sync` | cluster bus | `#memory-bus`, `@absolutejs/sync-bus-pg`, `@absolutejs/sync-bus-redis` |
-| `sync/crdt-adapter` | `@absolutejs/sync` | CRDT adapter | `#rga-text`, `@absolutejs/sync-yjs`, `@absolutejs/sync-automerge`, `@absolutejs/sync-loro` |
-| `rag/embedding-provider` | `@absolutejs/rag` | `RAGEmbeddingProvider` | `#openai`, `#gemini`, `#ollama` |
-| `rag/reranker` | `@absolutejs/rag` | `RAGRerankerProvider` | `#heuristic`, `#cohere`, `#voyage`, `#jina` |
-| `rag/vector-store` | `@absolutejs/rag` | `RAGVectorStore` | `@absolutejs/rag#memory`, `@absolutejs/rag-pinecone`, `@absolutejs/rag-postgres`, `@absolutejs/rag-sqlite` |
-| `voice/realtime` | `@absolutejs/voice` | speech-to-speech adapter | `@absolutejs/voice-gemini`, `@absolutejs/voice-openai` |
-| `voice/session-store` | `@absolutejs/voice` | session store | `#memory`, `#sqlite`, `#postgres`, `#json-file` |
-| `voice/stt` | `@absolutejs/voice` | STT adapter | assemblyai, azure, deepgram, gladia, google-speech, openai-whisper, soniox, speechmatics |
-| `voice/tts` | `@absolutejs/voice` | TTS adapter | azure, cartesia, elevenlabs, lmnt, neets, playht, rime, smallest |
+| Contract id                  | Core package             | Contract type            | Known implementations                                                                                      |
+| ---------------------------- | ------------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `audit/sink`                 | `@absolutejs/audit`      | `AuditSink`              | `#memory`, `#console`, `@absolutejs/audit-postgres`, `@absolutejs/audit-s3`                                |
+| `auth/session-store`         | `@absolutejs/auth`       | session store            | `@absolutejs/auth#postgres`, `@absolutejs/auth#redis`                                                      |
+| `blob/store`                 | `@absolutejs/blob`       | `BlobStore`              | `@absolutejs/blob#local`, `@absolutejs/blob#s3`                                                            |
+| `commerce/email-provider`    | `@absolutejs/commerce`   | receipt email provider   | `@absolutejs/commerce-resend`                                                                              |
+| `commerce/payment-provider`  | `@absolutejs/commerce`   | payment provider         | `@absolutejs/commerce-stripe`                                                                              |
+| `commerce/shipping-provider` | `@absolutejs/commerce`   | shipping provider        | `@absolutejs/commerce-easypost`                                                                            |
+| `crm/local-entity-store`     | `@absolutejs/crm`        | local entity store       | `#memory`, `#postgres`                                                                                     |
+| `crm/sync-queue`             | `@absolutejs/crm`        | sync queue               | `#memory`, `#postgres`                                                                                     |
+| `crm/token-store`            | `@absolutejs/crm`        | token store              | `#memory`, `#postgres`                                                                                     |
+| `dispatch/email-adapter`     | `@absolutejs/dispatch`   | `EmailAdapter`           | `@absolutejs/dispatch-resend`, `@absolutejs/dispatch-postmark`                                             |
+| `dispatch/push-adapter`      | `@absolutejs/dispatch`   | `PushAdapter`            | —                                                                                                          |
+| `discover/dataset-source`    | `@absolutejs/discover`   | `DatasetSource`          | `@absolutejs/dataset-gleif`, `@absolutejs/dataset-sec-edgar`, `@absolutejs/dataset-github`                 |
+| `dispatch/sms-adapter`       | `@absolutejs/dispatch`   | `SmsAdapter`             | `@absolutejs/dispatch-twilio`                                                                              |
+| `outcomes/store`             | `@absolutejs/outcomes`   | outcome store            | `#memory`                                                                                                  |
+| `rules/store`                | `@absolutejs/rules`      | rule store               | `#memory`                                                                                                  |
+| `errors/issue-store`         | `@absolutejs/errors`     | `IssueStore`             | `#memory`, `@absolutejs/errors-postgres`                                                                   |
+| `logs/sink`                  | `@absolutejs/logs`       | `LogSink`                | `#console-json`, `#console-pretty`, `#rotating-file`                                                       |
+| `meeting/source`             | `@absolutejs/meeting`    | meeting source           | `#buffer`, `@absolutejs/meeting-recall`, `@absolutejs/meeting-discord`                                     |
+| `metering/sink`              | `@absolutejs/metering`   | metering sink            | `#console`                                                                                                 |
+| `onchain/adapters`           | `@absolutejs/onchain`    | chain adapters           | `#local`, `@absolutejs/onchain-base`                                                                       |
+| `queue/job-store`            | `@absolutejs/queue`      | `JobStore`               | `@absolutejs/queue#memory`, `@absolutejs/queue-postgres`, `@absolutejs/queue-redis`                        |
+| `rate-limit/algorithm`       | `@absolutejs/rate-limit` | rate-limit algorithm     | `@absolutejs/rate-limit#gcra`, `#tokenBucket`, `#slidingWindow`                                            |
+| `rate-limit/store`           | `@absolutejs/rate-limit` | rate-limit store         | `@absolutejs/rate-limit#memoryStore`                                                                       |
+| `secrets/adapter`            | `@absolutejs/secrets`    | `SecretAdapter`          | `#env`, `#memory`, `#encrypted-file`                                                                       |
+| `sync/cluster-bus`           | `@absolutejs/sync`       | cluster bus              | `#memory-bus`, `@absolutejs/sync-bus-pg`, `@absolutejs/sync-bus-redis`                                     |
+| `sync/crdt-adapter`          | `@absolutejs/sync`       | CRDT adapter             | `#rga-text`, `@absolutejs/sync-yjs`, `@absolutejs/sync-automerge`, `@absolutejs/sync-loro`                 |
+| `rag/embedding-provider`     | `@absolutejs/rag`        | `RAGEmbeddingProvider`   | `#openai`, `#gemini`, `#ollama`                                                                            |
+| `rag/reranker`               | `@absolutejs/rag`        | `RAGRerankerProvider`    | `#heuristic`, `#cohere`, `#voyage`, `#jina`                                                                |
+| `rag/vector-store`           | `@absolutejs/rag`        | `RAGVectorStore`         | `@absolutejs/rag#memory`, `@absolutejs/rag-pinecone`, `@absolutejs/rag-postgres`, `@absolutejs/rag-sqlite` |
+| `voice/realtime`             | `@absolutejs/voice`      | speech-to-speech adapter | `@absolutejs/voice-gemini`, `@absolutejs/voice-openai`                                                     |
+| `voice/session-store`        | `@absolutejs/voice`      | session store            | `#memory`, `#sqlite`, `#postgres`, `#json-file`                                                            |
+| `voice/stt`                  | `@absolutejs/voice`      | STT adapter              | assemblyai, azure, deepgram, gladia, google-speech, openai-whisper, soniox, speechmatics                   |
+| `voice/tts`                  | `@absolutejs/voice`      | TTS adapter              | azure, cartesia, elevenlabs, lmnt, neets, playht, rime, smallest                                           |
 
 Add a row here when a core package declares a new slot. The conformance suite
 checks that every `slot.known` entry resolves to a published package or a
@@ -59,12 +59,12 @@ Wiring `code` templates and lifecycle `command` templates may use exactly four
 placeholder forms. Consumers MUST reject templates containing `${...}`
 sequences outside this grammar.
 
-| Form | Expands to |
-| --- | --- |
-| `${settings}` | the configured settings object, as a source literal |
-| `${settings.path}` | one settings value, serialized |
-| `${env.KEY}` | a `process.env.KEY` **reference** — never the value |
-| `${slot.name}` | the expanded wiring of the adapter chosen for slot `name` |
+| Form               | Expands to                                                |
+| ------------------ | --------------------------------------------------------- |
+| `${settings}`      | the configured settings object, as a source literal       |
+| `${settings.path}` | one settings value, serialized                            |
+| `${env.KEY}`       | a `process.env.KEY` **reference** — never the value       |
+| `${slot.name}`     | the expanded wiring of the adapter chosen for slot `name` |
 
 Anything richer waits for `contract: 2`.
 
@@ -85,8 +85,8 @@ today, candidates for first-class support in the next contract version:
    bindings.
 3. **Non-command migrations.** Some lifecycle steps are code changes, not
    commands (queue-postgres: extend your Drizzle schema + `drizzle-kit
-   push`). v1 convention: a step with no `command`, `when:
-   'before-first-run'`, docsUrl. Candidate: a `kind: 'code-change'` step
+push`). v1 convention: a step with no `command`, `when:
+'before-first-run'`, docsUrl. Candidate: a `kind: 'code-change'` step
    with a wiring snippet.
 4. **`LifecycleStep.description`** does not exist; how-to copy gets crammed
    into `title` + docsUrl.
@@ -118,7 +118,7 @@ today, candidates for first-class support in the next contract version:
     arms of a union options type (Deepgram's Conversational|Transcription);
     the implementation pins one arm. Offering both needs two implementations
     of the same factory.
-14. **Factory-map config.** Some config values are factory *symbols*, not
+14. **Factory-map config.** Some config values are factory _symbols_, not
     instances (crm's `adapters: Partial<Record<Vendor, Factory>>`) — neither
     slots (instance expressions) nor settings fit. Distinct from #9.
 15. **Instance-valued built-ins.** `AdapterImplementation.factory` says

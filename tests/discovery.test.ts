@@ -27,6 +27,16 @@ const manifest = defineManifest<unknown, Record<string, never>>()({
   slots: {},
   tools: {
     send_email: {
+      annotations: { openWorldHint: true },
+      authorization: {
+        approval: "policy",
+        audience: "owner",
+        destinationFields: ["to"],
+        effects: ["send", "external-network"],
+        idempotency: { mode: "host" },
+        requiredScopes: ["email:send"],
+        reversible: false,
+      },
       description: "Send one email",
       input: Type.Object(
         {
@@ -57,7 +67,10 @@ describe("agent catalog discovery", () => {
   });
 
   test("marks MCP tools COAZ when the input schema declares a mapping", () => {
-    const tool = toMcpToolRegistry(manifest, { runtime: {} }).send_email;
+    const tool = toMcpToolRegistry(manifest, {
+      runtime: {},
+      enforce: (_request, execute) => execute(),
+    }).send_email;
     expect(tool?.coaz).toBe(true);
   });
 });

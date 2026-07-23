@@ -2,53 +2,63 @@
  * real @absolutejs/ai and @absolutejs/mcp registry types WITHOUT this package
  * depending on either at runtime. Type-only imports; if either package
  * changes shape incompatibly, this file stops compiling. */
-import { describe, expect, test } from 'bun:test';
-import type { AIToolMap } from '@absolutejs/ai';
-import type { McpToolRegistry } from '@absolutejs/mcp';
-import { Type } from '@sinclair/typebox';
+import { describe, expect, test } from "bun:test";
+import type { AIToolMap } from "@absolutejs/ai";
+import type { McpToolRegistry } from "@absolutejs/mcp";
+import { Type } from "@sinclair/typebox";
 import {
-	defineManifest,
-	toAIToolMap,
-	toMcpToolRegistry,
-	toolFactory
-} from '../src/index';
-import type { ToolBindings } from '../src/types';
+  defineManifest,
+  toAIToolMap,
+  toMcpToolRegistry,
+  toolFactory,
+} from "../src/index";
+import type { ToolBindings } from "../src/types";
 
 type Runtime = { ping: () => string };
 const tool = toolFactory<Runtime>();
 
 const manifest = defineManifest<Record<never, never>, Runtime>()({
-	contract: 1,
-	identity: {
-		category: 'infrastructure',
-		name: '@absolutejs/compat-demo',
-		tagline: 'Compat fixture.'
-	},
-	settings: Type.Object({}),
-	tools: {
-		ping: tool.runtime({
-			description: 'Ping.',
-			input: Type.Object({}),
-			handler: (_input, runtime) => runtime.ping()
-		})
-	},
-	wiring: [{ id: 'default', title: 'noop' }]
+  contract: 2,
+  identity: {
+    category: "infrastructure",
+    name: "@absolutejs/compat-demo",
+    tagline: "Compat fixture.",
+  },
+  settings: Type.Object({}),
+  tools: {
+    ping: tool.runtime({
+      annotations: { readOnlyHint: true },
+      authorization: {
+        approval: "never",
+        audience: "authenticated",
+        effects: ["read"],
+        requiredScopes: ["health:read"],
+      },
+      description: "Ping.",
+      input: Type.Object({}),
+      handler: (_input, runtime) => runtime.ping(),
+    }),
+  },
+  wiring: [{ id: "default", title: "noop" }],
 });
 
-describe('structural compatibility', () => {
-	const bindings: ToolBindings<Runtime> = { runtime: { ping: () => 'pong' } };
+describe("structural compatibility", () => {
+  const bindings: ToolBindings<Runtime> = {
+    runtime: { ping: () => "pong" },
+    enforce: (_request, execute) => execute(),
+  };
 
-	test('toAIToolMap output is assignable to AIToolMap', async () => {
-		const aiTools: AIToolMap = toAIToolMap(manifest, bindings);
-		const {ping} = aiTools;
-		if (ping === undefined) throw new Error('missing tool');
-		expect(await ping.handler({})).toBe('pong');
-	});
+  test("toAIToolMap output is assignable to AIToolMap", async () => {
+    const aiTools: AIToolMap = toAIToolMap(manifest, bindings);
+    const { ping } = aiTools;
+    if (ping === undefined) throw new Error("missing tool");
+    expect(await ping.handler({})).toBe("pong");
+  });
 
-	test('toMcpToolRegistry output is assignable to McpToolRegistry', async () => {
-		const mcpTools: McpToolRegistry = toMcpToolRegistry(manifest, bindings);
-		const {ping} = mcpTools;
-		if (ping === undefined) throw new Error('missing tool');
-		expect(await ping.handler({})).toBe('pong');
-	});
+  test("toMcpToolRegistry output is assignable to McpToolRegistry", async () => {
+    const mcpTools: McpToolRegistry = toMcpToolRegistry(manifest, bindings);
+    const { ping } = mcpTools;
+    if (ping === undefined) throw new Error("missing tool");
+    expect(await ping.handler({})).toBe("pong");
+  });
 });
