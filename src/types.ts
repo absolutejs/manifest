@@ -100,7 +100,11 @@ export type WiringImport = {
 };
 
 export type WiringPlacement =
-  "client-entry" | "module-scope" | "server-factory" | "server-plugin";
+  | "client-entry"
+  | "module-scope"
+  | "server-boundary"
+  | "server-factory"
+  | "server-plugin";
 
 /** `code` is a template using the contract's placeholder grammar. Exactly
  *  four forms exist in contract v1 — consumers must reject anything else:

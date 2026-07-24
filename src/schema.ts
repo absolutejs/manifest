@@ -30,6 +30,7 @@ const wiringSnippet = Type.Object({
     Type.Union([
       Type.Literal("client-entry"),
       Type.Literal("module-scope"),
+      Type.Literal("server-boundary"),
       Type.Literal("server-factory"),
       Type.Literal("server-plugin"),
     ]),

@@ -139,6 +139,13 @@ config key without updating the manifest and the package's own `tsc` fails at
 this module. Type safety survives upgrades because it is enforced where the
 types live.
 
+Server wiring uses placement to preserve lifecycle semantics:
+`server-boundary` is mounted before the first route (error capture, request
+context, and other hooks that must observe every handler); `server-plugin`
+joins the normal plugin chain; `module-scope` creates top-level resources; and
+`server-factory` is reserved for host factory composition. Client recipes use
+`client-entry`.
+
 ### Package plumbing
 
 ```jsonc

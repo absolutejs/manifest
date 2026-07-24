@@ -86,6 +86,30 @@ describe("validateManifest", () => {
     expect(result.ok).toBe(true);
   });
 
+  test("accepts an early server boundary placement", () => {
+    const boundary: unknown = {
+      ...demoManifest,
+      wiring: [
+        {
+          id: "default",
+          server: {
+            code: ".use(errorsElysia({ capture }))",
+            imports: [
+              {
+                from: "@absolutejs/errors-elysia",
+                names: ["errorsElysia"],
+              },
+            ],
+            placement: "server-boundary",
+          },
+          title: "Capture every route",
+        },
+      ],
+    };
+
+    expect(validateManifest(boundary).ok).toBe(true);
+  });
+
   test("accepts module-namespace shapes (named/default export)", () => {
     expect(validateManifest({ manifest: demoManifest }).ok).toBe(true);
     expect(validateManifest({ default: demoManifest }).ok).toBe(true);
