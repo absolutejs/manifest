@@ -12,7 +12,7 @@
  *   absolute-manifest verify-tree      Recursively validate package policies.
  */
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Value } from "@sinclair/typebox/value";
@@ -31,6 +31,8 @@ const IGNORED_PACKAGE_DIRECTORIES = new Set([
   "dist",
   "node_modules",
 ]);
+
+type PackageTreeScan = { packagePaths: string[]; skippedDirectories: string[] };
 
 class CliError extends Error {}
 
@@ -181,15 +183,53 @@ const packagePathIsInspectable = (relativePath: string) =>
     .split("/")
     .some((segment) => IGNORED_PACKAGE_DIRECTORIES.has(segment));
 
+const scanPackageTree = async (
+  root: string,
+  directory = root,
+): Promise<PackageTreeScan> => {
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? Reflect.get(error, "code")
+        : undefined;
+    if (code === "EACCES" || code === "EPERM")
+      return { packagePaths: [], skippedDirectories: [directory] };
+    throw error;
+  }
+
+  const packagePaths: string[] = [];
+  const skippedDirectories: string[] = [];
+  if (entries.some((entry) => entry.isFile() && entry.name === "package.json"))
+    packagePaths.push(join(directory, "package.json"));
+  const childScans = await Promise.all(
+    entries
+      .filter(
+        (entry) =>
+          entry.isDirectory() && !IGNORED_PACKAGE_DIRECTORIES.has(entry.name),
+      )
+      .map((entry) => scanPackageTree(root, join(directory, entry.name))),
+  );
+
+  for (const child of childScans) {
+    packagePaths.push(...child.packagePaths);
+    skippedDirectories.push(...child.skippedDirectories);
+  }
+
+  return { packagePaths, skippedDirectories };
+};
+
 const verifyTree = async (
   explicitDirectory: string | undefined,
   artifacts: boolean,
 ) => {
   const root = resolve(process.cwd(), explicitDirectory ?? ".");
-  const glob = new Bun.Glob("**/package.json");
-  const packagePaths = (
-    await Array.fromAsync(glob.scan({ cwd: root, onlyFiles: true }))
-  ).filter(packagePathIsInspectable);
+  const scanned = await scanPackageTree(root);
+  const packagePaths = scanned.packagePaths
+    .map((packagePath) => packagePath.slice(root.length + 1))
+    .filter(packagePathIsInspectable);
   const results = await Promise.all(
     packagePaths.map(async (packagePath) => {
       const directory = resolve(root, packagePath, "..");
@@ -204,6 +244,10 @@ const verifyTree = async (
       : result.issues.map(({ message }) => `${packagePath}: ${message}`),
   );
   if (problems.length > 0) throw new CliError(problems.join("\n  "));
+  for (const directory of scanned.skippedDirectories)
+    console.warn(
+      `absolute-manifest: warning — skipped unreadable directory ${directory}`,
+    );
   console.log(
     `absolute-manifest: ${packagePaths.length} package policies valid in ${root}`,
   );
