@@ -7,6 +7,8 @@
  *                                      ./src/manifest.ts, then ./dist/manifest.js.
  *   absolute-manifest scaffold         Generate a starter src/manifest.ts
  *                                      from the package.json in cwd.
+ *   absolute-manifest verify-package   Validate shared-runtime ownership in
+ *                                      package.json without emitting a manifest.
  */
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -14,6 +16,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Value } from "@sinclair/typebox/value";
 import { resolveManifestExport, validateManifest } from "./load";
+import { validatePackageRuntimePolicy } from "./packagePolicy";
 import { serializeManifest } from "./schema";
 import { TOOL_NAME_PATTERN } from "./types";
 
@@ -24,8 +27,13 @@ class CliError extends Error {}
 type PackageJsonShape = {
   name?: string;
   description?: string;
-  absolutejs?: { manifestContract?: number };
+  absolutejs?: { manifestContract?: number; runtimePeers?: unknown };
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
   exports?: Record<string, unknown>;
+  peerDependencies?: Record<string, string>;
+  peerDependenciesMeta?: Record<string, { optional?: boolean }>;
+  scripts?: Record<string, string>;
 };
 
 const readPackageJson = async (dir: string) => {
@@ -68,6 +76,9 @@ const emit = async (explicitEntry?: string) => {
 
   const { manifest } = result;
   const problems: string[] = [];
+  const packagePolicy = validatePackageRuntimePolicy(packageJson);
+  if (!packagePolicy.ok)
+    problems.push(...packagePolicy.issues.map(({ message }) => message));
 
   if (
     packageJson.name !== undefined &&
@@ -112,6 +123,17 @@ const emit = async (explicitEntry?: string) => {
     `${JSON.stringify(serializeManifest(manifest), null, "\t")}\n`,
   );
   console.log(`absolute-manifest: wrote ${outPath}`);
+};
+
+const verifyPackage = async (explicitDirectory?: string) => {
+  const directory = resolve(process.cwd(), explicitDirectory ?? ".");
+  const packageJson = await readPackageJson(directory);
+  const result = validatePackageRuntimePolicy(packageJson);
+  if (!result.ok)
+    throw new CliError(
+      result.issues.map(({ message }) => message).join("\n  "),
+    );
+  console.log(`absolute-manifest: package policy valid in ${directory}`);
 };
 
 const scaffoldTemplate = (
@@ -169,9 +191,10 @@ const run = async () => {
   const [, , command, ...rest] = process.argv;
   if (command === "emit") await emit(rest[0]);
   else if (command === "scaffold") await scaffold();
+  else if (command === "verify-package") await verifyPackage(rest[0]);
   else
     throw new CliError(
-      `unknown command "${command ?? ""}" — use: emit [entry] | scaffold`,
+      `unknown command "${command ?? ""}" — use: emit [entry] | scaffold | verify-package [directory]`,
     );
 };
 

@@ -151,7 +151,16 @@ joins the normal plugin chain; `module-scope` creates top-level resources; and
 ```jsonc
 // package.json
 {
-  "absolutejs": { "manifestContract": 2 },
+  "absolutejs": {
+    "manifestContract": 2,
+    "runtimePeers": {
+      "@absolutejs/agency": {
+        "range": ">=0.7.1 <0.8.0",
+        "tested": "0.7.1",
+        "buildExternals": ["@absolutejs/agency", "@absolutejs/agency/*"],
+      },
+    },
+  },
   "exports": {
     "./manifest": {
       "types": "./dist/manifest.d.ts",
@@ -166,10 +175,19 @@ joins the normal plugin chain; `module-scope` creates top-level resources; and
 ```
 
 `absolute-manifest emit` validates the manifest (schema, tool-key naming,
-preset values, package.json agreement) and writes `dist/manifest.json` — the
-serializable projection (handlers stripped) for consumers that can't execute
-package code. It is derived, never hand-authored, so the two forms cannot
-diverge. `absolute-manifest scaffold` generates a starter `src/manifest.ts`.
+preset values, package.json agreement, and shared-runtime ownership) and writes
+`dist/manifest.json` — the serializable projection (handlers stripped) for
+consumers that can't execute package code. It is derived, never hand-authored,
+so the two forms cannot diverge. `absolute-manifest scaffold` generates a
+starter `src/manifest.ts`.
+
+`absolutejs.runtimePeers` declares contracts that must be supplied once by the
+host. The validator rejects a runtime duplicated in `dependencies`, a peer
+range or optionality mismatch, a dev dependency that differs from the exact
+tested version, and any missing build external. Keep compatibility windows
+conservative; supporting a new pre-1.0 minor requires a deliberate package
+release. Run `absolute-manifest verify-package` directly for packages that want
+the package policy gate without emitting a manifest.
 
 ## Consuming manifests
 

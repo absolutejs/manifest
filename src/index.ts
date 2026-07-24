@@ -15,6 +15,13 @@ export type { CredentialCardKey, CredentialCardSpec } from "./cards";
 export { manifestSchema, serializeManifest } from "./schema";
 export { loadManifest, resolveManifestExport, validateManifest } from "./load";
 export type { LoadManifestResult } from "./load";
+export { validatePackageRuntimePolicy } from "./packagePolicy";
+export type {
+  PackageRuntimePolicyInput,
+  PackageRuntimePolicyIssue,
+  PackageRuntimePolicyResult,
+  RuntimePeerPolicy,
+} from "./packagePolicy";
 export { TOOL_NAME_PATTERN } from "./types";
 export { digestToolInput, inspectManifestSecurity } from "./security";
 export type {
