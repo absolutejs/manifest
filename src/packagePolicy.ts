@@ -14,7 +14,8 @@ export type PackageRuntimePolicyIssue = {
     | "external_missing"
     | "invalid_policy"
     | "optional_mismatch"
-    | "peer_range_mismatch";
+    | "peer_range_mismatch"
+    | "unclassified_peer";
   message: string;
   runtime?: string;
 };
@@ -167,21 +168,25 @@ const validatePackageRuntimePolicy = (
   packageJson: PackageRuntimePolicyInput,
 ) => {
   const configured = packageJson.absolutejs?.runtimePeers;
-  if (configured === undefined)
-    return { issues: [], ok: true } satisfies PackageRuntimePolicyResult;
-  if (!isRecord(configured))
-    return {
-      issues: [
-        {
-          code: "invalid_policy",
-          message: "absolutejs.runtimePeers must be an object",
-        },
-      ],
-      ok: false,
-    } satisfies PackageRuntimePolicyResult;
-
   const issues: PackageRuntimePolicyIssue[] = [];
-  for (const [runtime, value] of Object.entries(configured)) {
+  let runtimePeers: Record<string, unknown> | undefined;
+  if (configured === undefined) runtimePeers = {};
+  else if (isRecord(configured)) runtimePeers = configured;
+  else
+    issues.push({
+      code: "invalid_policy",
+      message: "absolutejs.runtimePeers must be an object",
+    });
+
+  for (const runtime of Object.keys(packageJson.peerDependencies ?? {}))
+    if (runtimePeers?.[runtime] === undefined)
+      issues.push({
+        code: "unclassified_peer",
+        message: `${runtime} is a peer dependency and must be classified in absolutejs.runtimePeers`,
+        runtime,
+      });
+
+  for (const [runtime, value] of Object.entries(runtimePeers ?? {})) {
     const policy = parsedPolicy(runtime, value, issues);
     if (policy) validateDeclaredRuntime(packageJson, runtime, policy, issues);
   }

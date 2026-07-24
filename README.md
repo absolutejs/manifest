@@ -182,14 +182,15 @@ consumers that can't execute package code. It is derived, never hand-authored,
 so the two forms cannot diverge. `absolute-manifest scaffold` generates a
 starter `src/manifest.ts`.
 
-`absolutejs.runtimePeers` declares contracts that must be supplied once by the
-host. The validator rejects a runtime duplicated in `dependencies`, a peer
-range or optionality mismatch, a dev dependency that differs from the exact
-tested version, any missing build external, and any `artifactImports` entry
-that disappeared from the emitted JavaScript because it was bundled. An empty
-`artifactImports` array is an explicit declaration that the peer is type-only.
-Keep compatibility windows conservative; supporting a new pre-1.0 minor
-requires a deliberate package release.
+`absolutejs.runtimePeers` classifies every `peerDependencies` entry. Coverage is
+mandatory: the validator rejects any peer omitted from this map, a runtime
+duplicated in `dependencies`, a peer range or optionality mismatch, a dev
+dependency that differs from the exact tested version, any missing build
+external, and any `artifactImports` entry that disappeared from the emitted
+JavaScript because it was bundled. An empty `artifactImports` array is the
+explicit declaration that a peer is type-only; omission is never that
+declaration. Keep compatibility windows conservative; supporting a new pre-1.0
+minor requires a deliberate package release.
 
 Run `absolute-manifest verify-package --artifacts` directly for packages that
 want both package and emitted-artifact gates without emitting a manifest.

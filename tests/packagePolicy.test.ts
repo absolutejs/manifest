@@ -32,6 +32,57 @@ describe("shared runtime package policy", () => {
     });
   });
 
+  test("rejects every peer that has not been explicitly classified", () => {
+    const result = validatePackageRuntimePolicy({
+      devDependencies: {
+        "@absolutejs/agency": "0.7.1",
+        "drizzle-orm": "1.0.0-rc.4",
+      },
+      peerDependencies: {
+        "@absolutejs/agency": ">=0.7.1 <0.8.0",
+        "drizzle-orm": ">=1.0.0-rc.4 <2",
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected package policy rejection");
+    expect(result.issues).toEqual([
+      {
+        code: "unclassified_peer",
+        message:
+          "@absolutejs/agency is a peer dependency and must be classified in absolutejs.runtimePeers",
+        runtime: "@absolutejs/agency",
+      },
+      {
+        code: "unclassified_peer",
+        message:
+          "drizzle-orm is a peer dependency and must be classified in absolutejs.runtimePeers",
+        runtime: "drizzle-orm",
+      },
+    ]);
+  });
+
+  test("rejects a partially classified peer set", () => {
+    const candidate = validPackage();
+    const result = validatePackageRuntimePolicy({
+      ...candidate,
+      devDependencies: {
+        ...candidate.devDependencies,
+        "drizzle-orm": "1.0.0-rc.4",
+      },
+      peerDependencies: {
+        ...candidate.peerDependencies,
+        "drizzle-orm": ">=1.0.0-rc.4 <2",
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected package policy rejection");
+    expect(result.issues.map(({ code }) => code)).toEqual([
+      "unclassified_peer",
+    ]);
+  });
+
   test("rejects a private dependency, stale peer, and untested dev version", () => {
     const candidate: PackageRuntimePolicyInput = {
       ...validPackage(),
