@@ -155,6 +155,7 @@ joins the normal plugin chain; `module-scope` creates top-level resources; and
     "manifestContract": 2,
     "runtimePeers": {
       "@absolutejs/agency": {
+        "artifactImports": ["@absolutejs/agency"],
         "range": ">=0.7.1 <0.8.0",
         "tested": "0.7.1",
         "buildExternals": ["@absolutejs/agency", "@absolutejs/agency/*"],
@@ -184,10 +185,16 @@ starter `src/manifest.ts`.
 `absolutejs.runtimePeers` declares contracts that must be supplied once by the
 host. The validator rejects a runtime duplicated in `dependencies`, a peer
 range or optionality mismatch, a dev dependency that differs from the exact
-tested version, and any missing build external. Keep compatibility windows
-conservative; supporting a new pre-1.0 minor requires a deliberate package
-release. Run `absolute-manifest verify-package` directly for packages that want
-the package policy gate without emitting a manifest.
+tested version, any missing build external, and any `artifactImports` entry
+that disappeared from the emitted JavaScript because it was bundled. An empty
+`artifactImports` array is an explicit declaration that the peer is type-only.
+Keep compatibility windows conservative; supporting a new pre-1.0 minor
+requires a deliberate package release.
+
+Run `absolute-manifest verify-package --artifacts` directly for packages that
+want both package and emitted-artifact gates without emitting a manifest.
+`absolute-manifest verify-tree [directory] [--artifacts]` recursively checks a
+workspace while excluding generated and dependency directories.
 
 ## Consuming manifests
 

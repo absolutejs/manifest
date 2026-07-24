@@ -9,6 +9,7 @@
  *                                      from the package.json in cwd.
  *   absolute-manifest verify-package   Validate shared-runtime ownership in
  *                                      package.json without emitting a manifest.
+ *   absolute-manifest verify-tree      Recursively validate package policies.
  */
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -16,11 +17,20 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Value } from "@sinclair/typebox/value";
 import { resolveManifestExport, validateManifest } from "./load";
-import { validatePackageRuntimePolicy } from "./packagePolicy";
+import {
+  validatePackageArtifactPolicy,
+  validatePackageRuntimePolicy,
+} from "./packagePolicy";
 import { serializeManifest } from "./schema";
 import { TOOL_NAME_PATTERN } from "./types";
 
 const TAGLINE_MAX_LENGTH = 80;
+const IGNORED_PACKAGE_DIRECTORIES = new Set([
+  ".git",
+  "build",
+  "dist",
+  "node_modules",
+]);
 
 class CliError extends Error {}
 
@@ -42,6 +52,29 @@ const readPackageJson = async (dir: string) => {
   const parsed: PackageJsonShape = JSON.parse(await readFile(path, "utf8"));
 
   return parsed;
+};
+
+const readBuiltJavaScript = async (directory: string) => {
+  const glob = new Bun.Glob("dist/**/*.js");
+  const relativePaths = await Array.fromAsync(
+    glob.scan({ cwd: directory, onlyFiles: true }),
+  );
+  const entries = await Promise.all(
+    relativePaths.map(async (relativePath) => [
+      relativePath,
+      await readFile(join(directory, relativePath), "utf8"),
+    ]),
+  );
+
+  return Object.fromEntries(entries);
+};
+
+const validatePackageAt = async (directory: string, artifacts: boolean) => {
+  const packageJson = await readPackageJson(directory);
+  if (!artifacts) return validatePackageRuntimePolicy(packageJson);
+  const builtJavaScript = await readBuiltJavaScript(directory);
+
+  return validatePackageArtifactPolicy(packageJson, builtJavaScript);
 };
 
 const resolveEntry = (cwd: string, explicit?: string) => {
@@ -116,6 +149,11 @@ const emit = async (explicitEntry?: string) => {
   if (problems.length > 0) throw new CliError(problems.join("\n  "));
 
   const outDir = join(cwd, "dist");
+  const artifactPolicy = await validatePackageAt(cwd, true);
+  if (!artifactPolicy.ok)
+    throw new CliError(
+      artifactPolicy.issues.map(({ message }) => message).join("\n  "),
+    );
   await mkdir(outDir, { recursive: true });
   const outPath = join(outDir, "manifest.json");
   await writeFile(
@@ -125,15 +163,50 @@ const emit = async (explicitEntry?: string) => {
   console.log(`absolute-manifest: wrote ${outPath}`);
 };
 
-const verifyPackage = async (explicitDirectory?: string) => {
+const verifyPackage = async (
+  explicitDirectory: string | undefined,
+  artifacts: boolean,
+) => {
   const directory = resolve(process.cwd(), explicitDirectory ?? ".");
-  const packageJson = await readPackageJson(directory);
-  const result = validatePackageRuntimePolicy(packageJson);
+  const result = await validatePackageAt(directory, artifacts);
   if (!result.ok)
     throw new CliError(
       result.issues.map(({ message }) => message).join("\n  "),
     );
   console.log(`absolute-manifest: package policy valid in ${directory}`);
+};
+
+const packagePathIsInspectable = (relativePath: string) =>
+  !relativePath
+    .split("/")
+    .some((segment) => IGNORED_PACKAGE_DIRECTORIES.has(segment));
+
+const verifyTree = async (
+  explicitDirectory: string | undefined,
+  artifacts: boolean,
+) => {
+  const root = resolve(process.cwd(), explicitDirectory ?? ".");
+  const glob = new Bun.Glob("**/package.json");
+  const packagePaths = (
+    await Array.fromAsync(glob.scan({ cwd: root, onlyFiles: true }))
+  ).filter(packagePathIsInspectable);
+  const results = await Promise.all(
+    packagePaths.map(async (packagePath) => {
+      const directory = resolve(root, packagePath, "..");
+      const result = await validatePackageAt(directory, artifacts);
+
+      return { packagePath, result };
+    }),
+  );
+  const problems = results.flatMap(({ packagePath, result }) =>
+    result.ok
+      ? []
+      : result.issues.map(({ message }) => `${packagePath}: ${message}`),
+  );
+  if (problems.length > 0) throw new CliError(problems.join("\n  "));
+  console.log(
+    `absolute-manifest: ${packagePaths.length} package policies valid in ${root}`,
+  );
 };
 
 const scaffoldTemplate = (
@@ -189,12 +262,16 @@ const scaffold = async () => {
 
 const run = async () => {
   const [, , command, ...rest] = process.argv;
+  const artifacts = rest.includes("--artifacts");
+  const directory = rest.find((argument) => argument !== "--artifacts");
   if (command === "emit") await emit(rest[0]);
   else if (command === "scaffold") await scaffold();
-  else if (command === "verify-package") await verifyPackage(rest[0]);
+  else if (command === "verify-package")
+    await verifyPackage(directory, artifacts);
+  else if (command === "verify-tree") await verifyTree(directory, artifacts);
   else
     throw new CliError(
-      `unknown command "${command ?? ""}" — use: emit [entry] | scaffold | verify-package [directory]`,
+      `unknown command "${command ?? ""}" — use: emit [entry] | scaffold | verify-package [directory] [--artifacts] | verify-tree [directory] [--artifacts]`,
     );
 };
 

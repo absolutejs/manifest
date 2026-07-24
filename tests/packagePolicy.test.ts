@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   type PackageRuntimePolicyInput,
+  validatePackageArtifactPolicy,
   validatePackageRuntimePolicy,
 } from "../src";
 
@@ -8,6 +9,7 @@ const validPackage = () => ({
   absolutejs: {
     runtimePeers: {
       "@absolutejs/agency": {
+        artifactImports: ["@absolutejs/agency"],
         buildExternals: ["@absolutejs/agency", "@absolutejs/agency/*"],
         range: ">=0.7.1 <0.8.0",
         tested: "0.7.1",
@@ -73,11 +75,32 @@ describe("shared runtime package policy", () => {
     ]);
   });
 
+  test("requires declared runtime imports to survive the build", () => {
+    const result = validatePackageArtifactPolicy(validPackage(), {
+      "dist/index.js": 'import { Agency } from "@absolutejs/agency";',
+    });
+
+    expect(result).toEqual({ issues: [], ok: true });
+  });
+
+  test("rejects a runtime embedded into the built artifact", () => {
+    const result = validatePackageArtifactPolicy(validPackage(), {
+      "dist/index.js": "var embeddedAgencyRuntime = {};",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected artifact policy rejection");
+    expect(result.issues.map(({ code }) => code)).toEqual([
+      "artifact_import_missing",
+    ]);
+  });
+
   test("rejects malformed policy metadata", () => {
     const result = validatePackageRuntimePolicy({
       absolutejs: {
         runtimePeers: {
           "@absolutejs/agency": {
+            artifactImports: [],
             buildExternals: ["@absolutejs/agency", "@absolutejs/agency"],
             range: "",
             tested: "^0.7.1",

@@ -1,4 +1,5 @@
 export type RuntimePeerPolicy = {
+  artifactImports: readonly string[];
   buildExternals?: readonly string[];
   optional?: boolean;
   range: string;
@@ -7,6 +8,7 @@ export type RuntimePeerPolicy = {
 
 export type PackageRuntimePolicyIssue = {
   code:
+    | "artifact_import_missing"
     | "dependency_conflict"
     | "dev_dependency_mismatch"
     | "external_missing"
@@ -30,6 +32,8 @@ export type PackageRuntimePolicyInput = {
   scripts?: Record<string, string>;
 };
 
+export type PackageArtifactFiles = Readonly<Record<string, string>>;
+
 const EXACT_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -45,8 +49,8 @@ const hasExternal = (build: string, specifier: string) =>
     `--external="${specifier}"`,
   ].some((candidate) => build.includes(candidate));
 
-const parseBuildExternals = (value: unknown) => {
-  if (value === undefined) return [];
+const parseStringList = (value: unknown, optional = false) => {
+  if (value === undefined && optional) return [];
   if (
     !Array.isArray(value) ||
     !value.every(
@@ -72,8 +76,9 @@ const parsedPolicy = (
 
     return undefined;
   }
-  const { buildExternals, optional, range, tested } = value;
-  const externalList = parseBuildExternals(buildExternals);
+  const { artifactImports, buildExternals, optional, range, tested } = value;
+  const artifactImportList = parseStringList(artifactImports);
+  const externalList = parseStringList(buildExternals, true);
   if (
     runtime.length === 0 ||
     typeof range !== "string" ||
@@ -81,12 +86,14 @@ const parsedPolicy = (
     typeof tested !== "string" ||
     !EXACT_VERSION.test(tested) ||
     (optional !== undefined && typeof optional !== "boolean") ||
+    artifactImportList === undefined ||
     externalList === undefined ||
+    new Set(artifactImportList).size !== artifactImportList.length ||
     new Set(externalList).size !== externalList.length
   ) {
     issues.push({
       code: "invalid_policy",
-      message: `absolutejs.runtimePeers["${runtime}"] requires a non-empty range, exact tested version, optional boolean, and unique buildExternals`,
+      message: `absolutejs.runtimePeers["${runtime}"] requires a non-empty range, exact tested version, optional boolean, explicit unique artifactImports, and unique buildExternals`,
       runtime,
     });
 
@@ -94,12 +101,23 @@ const parsedPolicy = (
   }
 
   return {
+    artifactImports: artifactImportList,
     buildExternals: externalList,
     optional: optional === true,
     range,
     tested,
   } satisfies RuntimePeerPolicy;
 };
+
+const hasArtifactImport = (
+  artifacts: PackageArtifactFiles,
+  specifier: string,
+) =>
+  Object.values(artifacts).some(
+    (contents) =>
+      contents.includes(`"${specifier}"`) ||
+      contents.includes(`'${specifier}'`),
+  );
 
 const validateDeclaredRuntime = (
   packageJson: PackageRuntimePolicyInput,
@@ -145,7 +163,7 @@ const validateDeclaredRuntime = (
       });
 };
 
-export const validatePackageRuntimePolicy = (
+const validatePackageRuntimePolicy = (
   packageJson: PackageRuntimePolicyInput,
 ) => {
   const configured = packageJson.absolutejs?.runtimePeers;
@@ -172,3 +190,32 @@ export const validatePackageRuntimePolicy = (
     ? ({ issues: [], ok: true } satisfies PackageRuntimePolicyResult)
     : ({ issues, ok: false } satisfies PackageRuntimePolicyResult);
 };
+
+const validatePackageArtifactPolicy = (
+  packageJson: PackageRuntimePolicyInput,
+  artifacts: PackageArtifactFiles,
+) => {
+  const packagePolicy = validatePackageRuntimePolicy(packageJson);
+  if (!packagePolicy.ok) return packagePolicy;
+  const configured = packageJson.absolutejs?.runtimePeers;
+  if (!isRecord(configured)) return packagePolicy;
+
+  const issues: PackageRuntimePolicyIssue[] = [];
+  for (const [runtime, value] of Object.entries(configured)) {
+    const policy = parsedPolicy(runtime, value, issues);
+    if (!policy) continue;
+    for (const specifier of policy.artifactImports)
+      if (!hasArtifactImport(artifacts, specifier))
+        issues.push({
+          code: "artifact_import_missing",
+          message: `built JavaScript must retain an import of ${specifier} for host-owned runtime ${runtime}`,
+          runtime,
+        });
+  }
+
+  return issues.length === 0
+    ? ({ issues: [], ok: true } satisfies PackageRuntimePolicyResult)
+    : ({ issues, ok: false } satisfies PackageRuntimePolicyResult);
+};
+
+export { validatePackageArtifactPolicy, validatePackageRuntimePolicy };
