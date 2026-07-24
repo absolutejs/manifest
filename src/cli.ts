@@ -27,6 +27,7 @@ import { TOOL_NAME_PATTERN } from "./types";
 const TAGLINE_MAX_LENGTH = 80;
 const IGNORED_PACKAGE_DIRECTORIES = new Set([
   ".git",
+  ".test-shards",
   "build",
   "dist",
   "node_modules",

@@ -14,14 +14,23 @@ afterEach(async () => {
 });
 
 describe("verify-tree", () => {
-  test("skips unreadable service data while validating package roots", async () => {
+  test("skips generated shards and unreadable service data", async () => {
+    const generatedShardRoot = join(fixtureRoot, ".test-shards/shard-0");
     const packageRoot = join(fixtureRoot, "package");
     const unreadableRoot = join(fixtureRoot, "service-data");
+    await mkdir(generatedShardRoot, { recursive: true });
     await mkdir(packageRoot, { recursive: true });
     await mkdir(unreadableRoot, { recursive: true });
     await writeFile(
       join(packageRoot, "package.json"),
       JSON.stringify({ name: "fixture" }),
+    );
+    await writeFile(
+      join(generatedShardRoot, "package.json"),
+      JSON.stringify({
+        name: "generated-copy",
+        peerDependencies: { react: ">=19" },
+      }),
     );
     await chmod(unreadableRoot, unreadableDirectoryMode);
 

@@ -1,6 +1,6 @@
 {
   "name": "@absolutejs/manifest",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "The AbsoluteJS package manifest contract. Every @absolutejs/* package exports a typed manifest (settings schema, env requirements, adapter slots, wiring recipes, AI tools) from its ./manifest subpath; this package is the contract those manifests are written against, plus bridges that turn any manifest into an AI tool map or a remote MCP tool registry.",
   "repository": {
     "type": "git",
