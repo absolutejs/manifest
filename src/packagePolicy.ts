@@ -1,5 +1,6 @@
 export type RuntimePeerPolicy = {
   artifactImports: readonly string[];
+  artifactReferences?: readonly string[];
   buildExternals?: readonly string[];
   optional?: boolean;
   range: string;
@@ -9,6 +10,7 @@ export type RuntimePeerPolicy = {
 export type PackageRuntimePolicyIssue = {
   code:
     | "artifact_import_missing"
+    | "artifact_reference_missing"
     | "dependency_conflict"
     | "dev_dependency_mismatch"
     | "external_missing"
@@ -77,8 +79,16 @@ const parsedPolicy = (
 
     return undefined;
   }
-  const { artifactImports, buildExternals, optional, range, tested } = value;
+  const {
+    artifactImports,
+    artifactReferences,
+    buildExternals,
+    optional,
+    range,
+    tested,
+  } = value;
   const artifactImportList = parseStringList(artifactImports);
+  const artifactReferenceList = parseStringList(artifactReferences, true);
   const externalList = parseStringList(buildExternals, true);
   if (
     runtime.length === 0 ||
@@ -88,13 +98,15 @@ const parsedPolicy = (
     !EXACT_VERSION.test(tested) ||
     (optional !== undefined && typeof optional !== "boolean") ||
     artifactImportList === undefined ||
+    artifactReferenceList === undefined ||
     externalList === undefined ||
     new Set(artifactImportList).size !== artifactImportList.length ||
+    new Set(artifactReferenceList).size !== artifactReferenceList.length ||
     new Set(externalList).size !== externalList.length
   ) {
     issues.push({
       code: "invalid_policy",
-      message: `absolutejs.runtimePeers["${runtime}"] requires a non-empty range, exact tested version, optional boolean, explicit unique artifactImports, and unique buildExternals`,
+      message: `absolutejs.runtimePeers["${runtime}"] requires a non-empty range, exact tested version, optional boolean, explicit unique artifactImports, unique artifactReferences, and unique buildExternals`,
       runtime,
     });
 
@@ -103,6 +115,7 @@ const parsedPolicy = (
 
   return {
     artifactImports: artifactImportList,
+    artifactReferences: artifactReferenceList,
     buildExternals: externalList,
     optional: optional === true,
     range,
@@ -214,6 +227,17 @@ const validatePackageArtifactPolicy = (
         issues.push({
           code: "artifact_import_missing",
           message: `built JavaScript must retain an import of ${specifier} for host-owned runtime ${runtime}`,
+          runtime,
+        });
+    for (const reference of policy.artifactReferences ?? [])
+      if (
+        !Object.values(artifacts).some((contents) =>
+          contents.includes(reference),
+        )
+      )
+        issues.push({
+          code: "artifact_reference_missing",
+          message: `built JavaScript must retain the dynamic reference ${JSON.stringify(reference)} for host-owned runtime ${runtime}`,
           runtime,
         });
   }

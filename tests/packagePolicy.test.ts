@@ -10,6 +10,7 @@ const validPackage = () => ({
     runtimePeers: {
       "@absolutejs/agency": {
         artifactImports: ["@absolutejs/agency"],
+        artifactReferences: Array<string>(),
         buildExternals: ["@absolutejs/agency", "@absolutejs/agency/*"],
         range: ">=0.7.1 <0.8.0",
         tested: "0.7.1",
@@ -143,6 +144,31 @@ describe("shared runtime package policy", () => {
     if (result.ok) throw new Error("Expected artifact policy rejection");
     expect(result.issues.map(({ code }) => code)).toEqual([
       "artifact_import_missing",
+    ]);
+  });
+
+  test("proves a dynamically resolved host runtime through artifact evidence", () => {
+    const candidate = validPackage();
+    candidate.absolutejs.runtimePeers["@absolutejs/agency"] = {
+      ...candidate.absolutejs.runtimePeers["@absolutejs/agency"],
+      artifactImports: [],
+      artifactReferences: ["node_modules/@absolutejs/agency"],
+      buildExternals: [],
+    };
+
+    expect(
+      validatePackageArtifactPolicy(candidate, {
+        "dist/index.js":
+          'const runtimePath = "node_modules/@absolutejs/agency";',
+      }),
+    ).toEqual({ issues: [], ok: true });
+    const missing = validatePackageArtifactPolicy(candidate, {
+      "dist/index.js": "const runtimePath = 'node_modules/other';",
+    });
+    expect(missing.ok).toBe(false);
+    if (missing.ok) throw new Error("Expected dynamic evidence rejection");
+    expect(missing.issues.map(({ code }) => code)).toEqual([
+      "artifact_reference_missing",
     ]);
   });
 

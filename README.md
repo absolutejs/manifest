@@ -156,6 +156,7 @@ joins the normal plugin chain; `module-scope` creates top-level resources; and
     "runtimePeers": {
       "@absolutejs/agency": {
         "artifactImports": ["@absolutejs/agency"],
+        "artifactReferences": [],
         "range": ">=0.7.1 <0.8.0",
         "tested": "0.7.1",
         "buildExternals": ["@absolutejs/agency", "@absolutejs/agency/*"],
@@ -188,7 +189,10 @@ duplicated in `dependencies`, a peer range or optionality mismatch, a dev
 dependency that differs from the exact tested version, any missing build
 external, and any `artifactImports` entry that disappeared from the emitted
 JavaScript because it was bundled. An empty `artifactImports` array is the
-explicit declaration that a peer is type-only; omission is never that
+explicit declaration that no static import survives. A dynamically resolved
+peer must instead declare stable `artifactReferences` strings that survive in
+the built JavaScript (for example, a host `node_modules/sharp` lookup); only a
+peer with both evidence arrays empty is type-only. Omission is never a
 declaration. Keep compatibility windows conservative; supporting a new pre-1.0
 minor requires a deliberate package release.
 
