@@ -53,6 +53,21 @@ export type ManifestDiscovery = {
   certificationUrl?: string;
 };
 
+/**
+ * How a no-code host may integrate this package.
+ *
+ * `recipe` packages own at least one executable wiring recipe. `adapter`
+ * packages implement a named slot contract. `code-first` packages are
+ * discoverable ecosystem building blocks whose production integration needs
+ * host-owned instances, policies, stores, signers, or callbacks and must not
+ * be represented as one-click wiring.
+ */
+export type ManifestIntegration = {
+  mode: "adapter" | "code-first" | "recipe";
+  /** Plain-language explanation shown when automatic wiring is unavailable. */
+  description?: string;
+};
+
 /* ─── Requirements ─── */
 
 export type EnvRequirement = {
@@ -356,6 +371,7 @@ export type PackageManifest<TConfig = unknown, TRuntime = unknown> = {
    *  version. */
   contract: 1 | 2;
   identity: ManifestIdentity;
+  integration?: ManifestIntegration;
   discovery?: ManifestDiscovery;
   requires?: ManifestRequirements;
   /** TypeBox schema for the SERIALIZABLE subset of the package's config

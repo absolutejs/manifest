@@ -227,6 +227,16 @@ export const manifestSchema = Type.Object({
     tagline: Type.String({ minLength: 1 }),
   }),
   implements: Type.Optional(Type.Array(adapterImplementation)),
+  integration: Type.Optional(
+    Type.Object({
+      description: Type.Optional(Type.String({ minLength: 1 })),
+      mode: Type.Union([
+        Type.Literal("adapter"),
+        Type.Literal("code-first"),
+        Type.Literal("recipe"),
+      ]),
+    }),
+  ),
   lifecycle: Type.Optional(Type.Array(lifecycleStep)),
   presets: Type.Optional(
     Type.Array(

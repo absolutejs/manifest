@@ -48,6 +48,7 @@ export type {
   LifecycleStep,
   ManifestCategory,
   ManifestIdentity,
+  ManifestIntegration,
   ManifestDiscovery,
   ManifestRequirements,
   ManifestTool,

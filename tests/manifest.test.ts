@@ -132,6 +132,46 @@ describe("validateManifest", () => {
     const result = validateManifest(rest);
     expect(result.ok).toBe(false);
   });
+
+  test("enforces explicit no-code integration roles", () => {
+    expect(
+      validateManifest({
+        ...demoManifest,
+        integration: { mode: "recipe" },
+      }).ok,
+    ).toBe(true);
+    expect(
+      validateManifest({
+        ...demoManifest,
+        integration: { mode: "code-first" },
+      }),
+    ).toMatchObject({
+      details:
+        'integration mode "code-first" cannot declare automatic wiring recipes',
+      ok: false,
+    });
+    expect(
+      validateManifest({
+        ...demoManifest,
+        integration: { mode: "adapter" },
+        wiring: [],
+      }),
+    ).toMatchObject({
+      details:
+        'integration mode "adapter" requires at least one implementation',
+      ok: false,
+    });
+    expect(
+      validateManifest({
+        ...demoManifest,
+        integration: { mode: "recipe" },
+        wiring: [],
+      }),
+    ).toMatchObject({
+      details: 'integration mode "recipe" requires at least one wiring recipe',
+      ok: false,
+    });
+  });
 });
 
 describe("legacy bridge boundary", () => {

@@ -51,6 +51,22 @@ manifests, not just AbsoluteJS's own products.
 
 MIT licensed. Sole peer dependency: `@sinclair/typebox`.
 
+## No-code integration role
+
+Packages explicitly describe how a no-code host may integrate them:
+
+- `integration: { mode: "recipe" }` owns executable wiring and must publish at
+  least one wiring recipe.
+- `integration: { mode: "adapter" }` fills a named ecosystem slot and must
+  publish at least one `implements` entry.
+- `integration: { mode: "code-first", description: "…" }` remains searchable
+  and explainable, but the host must not pretend it can automatically assemble
+  production-specific stores, policies, signers, callbacks, or identities.
+
+Older manifests without this field remain valid for compatibility. Consumers
+may retain their historical inference for those packages, but current
+manifests should declare the role explicitly.
+
 ## Why TypeBox
 
 A TypeBox schema is simultaneously a TypeScript type (via `Static<>`) and a

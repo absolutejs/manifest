@@ -37,12 +37,27 @@ const missing = (details: string) => {
   return result;
 };
 
+const integrationFailure = (manifest: AnyPackageManifest) => {
+  const mode = manifest.integration?.mode;
+
+  if (mode === "recipe" && manifest.wiring.length === 0)
+    return 'integration mode "recipe" requires at least one wiring recipe';
+  if (mode === "adapter" && (manifest.implements?.length ?? 0) === 0)
+    return 'integration mode "adapter" requires at least one implementation';
+  if (mode === "code-first" && manifest.wiring.length > 0)
+    return 'integration mode "code-first" cannot declare automatic wiring recipes';
+
+  return undefined;
+};
+
 const validate = (candidate: unknown, source: string) => {
   if (!isManifestShaped(candidate))
     return missing(`${source} did not export a manifest object`);
 
   const projected = serializeManifest(candidate);
   if (Value.Check(manifestSchema, projected)) {
+    const invalidIntegration = integrationFailure(candidate);
+    if (invalidIntegration) return invalid(invalidIntegration);
     if (
       candidate.contract === 1 &&
       Object.values(candidate.tools ?? {}).some(
