@@ -68,6 +68,96 @@ export type ManifestIntegration = {
   description?: string;
 };
 
+/* ─── Product projections ─── */
+
+export type ManifestVisualBlock = {
+  /** Stable package-local id used by application-model bindings. */
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  /** Serializable component props; secret values are never valid block props. */
+  props: TSchema;
+  frameworks?: ReadonlyArray<ClientFramework>;
+  /** Exported component or host-resolved block identifier, never source code. */
+  componentExport: string;
+};
+
+export type ManifestDataSource = {
+  id: string;
+  title: string;
+  description: string;
+  schema: TSchema;
+  operations: ReadonlyArray<
+    "aggregate" | "create" | "delete" | "detail" | "list" | "update"
+  >;
+  /** operation → guarded manifest tool name */
+  tools?: Partial<
+    Record<
+      "aggregate" | "create" | "delete" | "detail" | "list" | "update",
+      string
+    >
+  >;
+};
+
+export type ManifestWorkflowAction = {
+  id: string;
+  title: string;
+  description: string;
+  /** Guarded manifest tool invoked by the workflow runtime. */
+  tool: string;
+};
+
+export type ManifestEventBinding = {
+  id: string;
+  title: string;
+  description: string;
+  schema: TSchema;
+  source: "data" | "package" | "ui" | "webhook";
+};
+
+export type ManifestConnection = {
+  id: string;
+  title: string;
+  description: string;
+  kind: "none" | "oauth" | "secret";
+  /** References keys declared in requires.env; values never enter a manifest. */
+  envKeys?: ReadonlyArray<string>;
+  setupTool?: string;
+  testTool?: string;
+};
+
+export type ManifestHealthCheck = {
+  id: string;
+  title: string;
+  description: string;
+  /** A guarded read-only manifest tool. */
+  tool: string;
+};
+
+export type ManifestReleaseCheck = {
+  id: string;
+  title: string;
+  description: string;
+  severity: "blocking" | "warning";
+  healthCheckIds?: ReadonlyArray<string>;
+};
+
+/**
+ * The customer-facing projection a no-code host may add to its shared
+ * application model. Projections only reference existing guarded tools and
+ * requirements; they cannot broaden package authority.
+ */
+export type ManifestProductProjection = {
+  blocks?: ReadonlyArray<ManifestVisualBlock>;
+  dataSources?: ReadonlyArray<ManifestDataSource>;
+  workflowActions?: ReadonlyArray<ManifestWorkflowAction>;
+  events?: ReadonlyArray<ManifestEventBinding>;
+  connections?: ReadonlyArray<ManifestConnection>;
+  healthChecks?: ReadonlyArray<ManifestHealthCheck>;
+  releaseChecks?: ReadonlyArray<ManifestReleaseCheck>;
+};
+
 /* ─── Requirements ─── */
 
 export type EnvRequirement = {
@@ -372,6 +462,7 @@ export type PackageManifest<TConfig = unknown, TRuntime = unknown> = {
   contract: 1 | 2;
   identity: ManifestIdentity;
   integration?: ManifestIntegration;
+  product?: ManifestProductProjection;
   discovery?: ManifestDiscovery;
   requires?: ManifestRequirements;
   /** TypeBox schema for the SERIALIZABLE subset of the package's config

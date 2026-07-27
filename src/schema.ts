@@ -1,5 +1,8 @@
 import { Type } from "@sinclair/typebox";
-import { TOOL_NAME_PATTERN, type AnyPackageManifest } from "./types";
+import {
+  TOOL_NAME_PATTERN,
+  type AnyPackageManifest,
+} from "./types";
 
 /* The manifest's own TypeBox schema — the contract dogfooding itself.
  * It describes the SERIALIZABLE projection of a manifest (tool handlers
@@ -198,6 +201,122 @@ const serializedTool = Type.Object({
   kind: Type.Union([Type.Literal("runtime"), Type.Literal("workspace")]),
 });
 
+const productId = Type.String({ pattern: "^[a-z][a-z0-9_-]{0,63}$" });
+const productCopy: Record<string, ReturnType<typeof Type.String>> = {
+  description: Type.String({ minLength: 1 }),
+  id: productId,
+  title: Type.String({ minLength: 1 }),
+};
+const productOperation = Type.Union([
+  Type.Literal("aggregate"),
+  Type.Literal("create"),
+  Type.Literal("delete"),
+  Type.Literal("detail"),
+  Type.Literal("list"),
+  Type.Literal("update"),
+]);
+const productProjection = Type.Object({
+  blocks: Type.Optional(
+    Type.Array(
+      Type.Object({
+        ...productCopy,
+        category: Type.String({ minLength: 1 }),
+        componentExport: Type.String({ minLength: 1 }),
+        frameworks: Type.Optional(
+          Type.Array(
+            Type.Union(
+              clientFrameworks.map((framework) => Type.Literal(framework)),
+            ),
+          ),
+        ),
+        props: jsonSchemaObject,
+      }),
+    ),
+  ),
+  connections: Type.Optional(
+    Type.Array(
+      Type.Object({
+        ...productCopy,
+        envKeys: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+        kind: Type.Union([
+          Type.Literal("none"),
+          Type.Literal("oauth"),
+          Type.Literal("secret"),
+        ]),
+        setupTool: Type.Optional(
+          Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+        ),
+        testTool: Type.Optional(
+          Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+        ),
+      }),
+    ),
+  ),
+  dataSources: Type.Optional(
+    Type.Array(
+      Type.Object({
+        ...productCopy,
+        operations: Type.Array(productOperation, { minItems: 1 }),
+        schema: jsonSchemaObject,
+        tools: Type.Optional(
+          Type.Partial(
+            Type.Object({
+              aggregate: Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+              create: Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+              delete: Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+              detail: Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+              list: Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+              update: Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+            }),
+          ),
+        ),
+      }),
+    ),
+  ),
+  events: Type.Optional(
+    Type.Array(
+      Type.Object({
+        ...productCopy,
+        schema: jsonSchemaObject,
+        source: Type.Union([
+          Type.Literal("data"),
+          Type.Literal("package"),
+          Type.Literal("ui"),
+          Type.Literal("webhook"),
+        ]),
+      }),
+    ),
+  ),
+  healthChecks: Type.Optional(
+    Type.Array(
+      Type.Object({
+        ...productCopy,
+        tool: Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+      }),
+    ),
+  ),
+  releaseChecks: Type.Optional(
+    Type.Array(
+      Type.Object({
+        ...productCopy,
+        healthCheckIds: Type.Optional(Type.Array(productId)),
+        severity: Type.Union([
+          Type.Literal("blocking"),
+          Type.Literal("warning"),
+        ]),
+      }),
+    ),
+  ),
+  workflowActions: Type.Optional(
+    Type.Array(
+      Type.Object({
+        ...productCopy,
+        tool: Type.String({ pattern: TOOL_NAME_PATTERN.source }),
+      }),
+    ),
+  ),
+});
+
 export const manifestSchema = Type.Object({
   contract: Type.Union([Type.Literal(1), Type.Literal(2)]),
   discovery: Type.Optional(
@@ -248,6 +367,7 @@ export const manifestSchema = Type.Object({
       }),
     ),
   ),
+  product: Type.Optional(productProjection),
   requires: Type.Optional(manifestRequirements),
   settings: jsonSchemaObject,
   slots: Type.Optional(Type.Record(Type.String(), adapterSlot)),

@@ -7,7 +7,11 @@ import {
   toolFactory,
   validateManifest,
 } from "../src/index";
-import type { ToolBindings, Workspace } from "../src/types";
+import type {
+  PackageManifest,
+  ToolBindings,
+  Workspace,
+} from "../src/types";
 
 /* A miniature "package" to exercise the whole contract. */
 
@@ -169,6 +173,112 @@ describe("validateManifest", () => {
       }),
     ).toMatchObject({
       details: 'integration mode "recipe" requires at least one wiring recipe',
+      ok: false,
+    });
+  });
+
+  test("validates customer-facing product projections against guarded tools", () => {
+    const readNotesTool = demoManifest.tools?.read_notes;
+    const sendGreetingTool = demoManifest.tools?.send_greeting;
+    if (!readNotesTool || readNotesTool.kind !== "workspace")
+      throw new Error("Demo read tool is required");
+    if (!sendGreetingTool || sendGreetingTool.kind !== "runtime")
+      throw new Error("Demo send tool is required");
+    const productManifest: PackageManifest<DemoConfig, DemoRuntime> = {
+      ...demoManifest,
+      contract: 2 as const,
+      product: {
+        connections: [
+          {
+            description: "Connect the greeting service.",
+            envKeys: ["GREETING_TOKEN"],
+            id: "greeting",
+            kind: "secret" as const,
+            testTool: "read_notes",
+            title: "Greeting connection",
+          },
+        ],
+        healthChecks: [
+          {
+            description: "Check that notes can be read.",
+            id: "notes",
+            title: "Notes health",
+            tool: "read_notes",
+          },
+        ],
+        releaseChecks: [
+          {
+            description: "Require readable notes.",
+            healthCheckIds: ["notes"],
+            id: "notes_ready",
+            severity: "blocking" as const,
+            title: "Notes are ready",
+          },
+        ],
+        workflowActions: [
+          {
+            description: "Send one greeting.",
+            id: "send",
+            title: "Send greeting",
+            tool: "send_greeting",
+          },
+        ],
+      },
+      requires: {
+        env: [
+          {
+            description: "Greeting token",
+            key: "GREETING_TOKEN",
+            secret: true,
+          },
+        ],
+      },
+      tools: {
+        read_notes: {
+          ...readNotesTool,
+          annotations: { readOnlyHint: true },
+          authorization: {
+            approval: "never" as const,
+            audience: "owner" as const,
+            effects: ["read"],
+            requiredScopes: ["notes:read"],
+          },
+        },
+        send_greeting: {
+          ...sendGreetingTool,
+          authorization: {
+            approval: "policy" as const,
+            audience: "owner" as const,
+            destinationFields: ["to"],
+            effects: ["send"],
+            idempotency: { mode: "host" as const },
+            requiredScopes: ["greetings:send"],
+            reversible: false,
+          },
+        },
+      },
+    };
+
+    const productResult = validateManifest(productManifest);
+    expect(productResult.ok).toBe(true);
+    expect(
+      validateManifest({
+        ...productManifest,
+        product: {
+          ...productManifest.product,
+          workflowActions: [
+            {
+              description: "Invent authority.",
+              id: "invent",
+              title: "Invent",
+              tool: "missing_tool",
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({
+      details:
+        'product.workflowActions "invent" references missing tool "missing_tool"',
       ok: false,
     });
   });
