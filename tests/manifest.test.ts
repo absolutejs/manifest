@@ -7,11 +7,7 @@ import {
   toolFactory,
   validateManifest,
 } from "../src/index";
-import type {
-  PackageManifest,
-  ToolBindings,
-  Workspace,
-} from "../src/types";
+import type { PackageManifest, ToolBindings, Workspace } from "../src/types";
 
 /* A miniature "package" to exercise the whole contract. */
 
@@ -97,11 +93,11 @@ describe("validateManifest", () => {
         {
           id: "default",
           server: {
-            code: ".use(errorsElysia({ capture }))",
+            code: ".use(errorsPlugin({ server: { capture } }))",
             imports: [
               {
-                from: "@absolutejs/errors-elysia",
-                names: ["errorsElysia"],
+                from: "@absolutejs/errors/elysia",
+                names: ["errorsPlugin"],
               },
             ],
             placement: "server-boundary",
