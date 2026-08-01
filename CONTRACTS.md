@@ -25,7 +25,7 @@ installed manifests — publishing a new adapter never requires a core release.
 | `crm/sync-queue`             | `@absolutejs/crm`        | sync queue               | `#memory`, `#postgres`                                                                                                    |
 | `crm/token-store`            | `@absolutejs/crm`        | token store              | `#memory`, `#postgres`                                                                                                    |
 | `dispatch/email-adapter`     | `@absolutejs/dispatch`   | `EmailAdapter`           | `@absolutejs/dispatch-resend`, `@absolutejs/dispatch-postmark`                                                            |
-| `dispatch/push-adapter`      | `@absolutejs/dispatch`   | `PushAdapter`            | —                                                                                                                         |
+| `dispatch/push-adapter`      | `@absolutejs/dispatch`   | `PushAdapter`            | `@absolutejs/dispatch-apns`, `@absolutejs/dispatch-fcm`                                                                    |
 | `discover/dataset-source`    | `@absolutejs/discover`   | `DatasetSource`          | `@absolutejs/dataset-gleif`, `@absolutejs/dataset-sec-edgar`, `@absolutejs/dataset-github`                                |
 | `dispatch/messaging-adapter` | `@absolutejs/dispatch`   | `MessagingAdapter`       | `@absolutejs/dispatch-sinch`, `@absolutejs/dispatch-telnyx`, `@absolutejs/dispatch-twilio`, `@absolutejs/dispatch-vonage` |
 | `outcomes/store`             | `@absolutejs/outcomes`   | outcome store            | `#memory`                                                                                                                 |
