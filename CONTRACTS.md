@@ -27,7 +27,7 @@ installed manifests — publishing a new adapter never requires a core release.
 | `dispatch/email-adapter`     | `@absolutejs/dispatch`   | `EmailAdapter`           | `@absolutejs/dispatch-resend`, `@absolutejs/dispatch-postmark`                                             |
 | `dispatch/push-adapter`      | `@absolutejs/dispatch`   | `PushAdapter`            | —                                                                                                          |
 | `discover/dataset-source`    | `@absolutejs/discover`   | `DatasetSource`          | `@absolutejs/dataset-gleif`, `@absolutejs/dataset-sec-edgar`, `@absolutejs/dataset-github`                 |
-| `dispatch/messaging-adapter` | `@absolutejs/dispatch`   | `MessagingAdapter`       | `@absolutejs/dispatch-telnyx`, `@absolutejs/dispatch-twilio`                                               |
+| `dispatch/messaging-adapter` | `@absolutejs/dispatch`   | `MessagingAdapter`       | `@absolutejs/dispatch-telnyx`, `@absolutejs/dispatch-twilio`, `@absolutejs/dispatch-vonage`                |
 | `outcomes/store`             | `@absolutejs/outcomes`   | outcome store            | `#memory`                                                                                                  |
 | `rules/store`                | `@absolutejs/rules`      | rule store               | `#memory`                                                                                                  |
 | `errors/issue-store`         | `@absolutejs/errors`     | `IssueStore`             | `#memory`, `@absolutejs/errors-postgres`                                                                   |
