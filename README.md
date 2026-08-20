@@ -169,15 +169,6 @@ joins the normal plugin chain; `module-scope` creates top-level resources; and
 {
   "absolutejs": {
     "manifestContract": 2,
-    "runtimePeers": {
-      "@absolutejs/agency": {
-        "artifactImports": ["@absolutejs/agency"],
-        "artifactReferences": [],
-        "range": ">=0.7.1 <0.8.0",
-        "tested": "0.7.1",
-        "buildExternals": ["@absolutejs/agency", "@absolutejs/agency/*"],
-      },
-    },
   },
   "exports": {
     "./manifest": {
@@ -193,29 +184,22 @@ joins the normal plugin chain; `module-scope` creates top-level resources; and
 ```
 
 `absolute-manifest emit` validates the manifest (schema, tool-key naming,
-preset values, package.json agreement, and shared-runtime ownership) and writes
+preset values, package.json agreement, and peer dependency relationships) and writes
 `dist/manifest.json` — the serializable projection (handlers stripped) for
 consumers that can't execute package code. It is derived, never hand-authored,
 so the two forms cannot diverge. `absolute-manifest scaffold` generates a
 starter `src/manifest.ts`.
 
-`absolutejs.runtimePeers` classifies every `peerDependencies` entry. Coverage is
-mandatory: the validator rejects any peer omitted from this map, a runtime
-duplicated in `dependencies`, a peer range or optionality mismatch, a dev
-dependency that differs from the exact tested version, any missing build
-external, and any `artifactImports` entry that disappeared from the emitted
-JavaScript because it was bundled. An empty `artifactImports` array is the
-explicit declaration that no static import survives. A dynamically resolved
-peer must instead declare stable `artifactReferences` strings that survive in
-the built JavaScript (for example, a host `node_modules/sharp` lookup); only a
-peer with both evidence arrays empty is type-only. Omission is never a
-declaration. Keep compatibility windows conservative; supporting a new pre-1.0
-minor requires a deliberate package release.
+Standard package metadata is the only dependency contract. Put host-owned
+runtimes in `peerDependencies`, optionality in `peerDependenciesMeta`, and the
+version used by tests in `devDependencies`. Configure externals in the package's
+actual build command or build API. No parallel AbsoluteJS dependency map is
+required.
 
-Run `absolute-manifest verify-package --artifacts` directly for packages that
-want both package and emitted-artifact gates without emitting a manifest.
-`absolute-manifest verify-tree [directory] [--artifacts]` recursively checks a
-workspace while excluding generated and dependency directories.
+`absolute-manifest verify-package` checks derivable peer relationships, such as
+rejecting a peer duplicated in `dependencies`.
+`absolute-manifest verify-tree [directory]` recursively applies the same check
+while excluding generated and dependency directories.
 
 ## Consuming manifests
 

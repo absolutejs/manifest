@@ -1,6 +1,6 @@
 {
   "name": "@absolutejs/manifest",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "The AbsoluteJS package manifest contract. Every @absolutejs/* package exports a typed manifest (settings schema, env requirements, adapter slots, wiring recipes, AI tools) from its ./manifest subpath; this package is the contract those manifests are written against, plus bridges that turn any manifest into an AI tool map or a remote MCP tool registry.",
   "repository": {
     "type": "git",
@@ -29,22 +29,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "absolutejs": {
-    "runtimePeers": {
-      "@sinclair/typebox": {
-        "artifactImports": [
-          "@sinclair/typebox",
-          "@sinclair/typebox/value"
-        ],
-        "range": ">=0.34.0 <0.35.0",
-        "tested": "0.34.52",
-        "buildExternals": [
-          "@sinclair/typebox",
-          "@sinclair/typebox/*"
-        ]
-      }
-    }
-  },
   "files": [
     "dist",
     "LICENSE",
@@ -57,7 +41,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"./**/*.{ts,json,md}\"",
     "lint": "eslint . --max-warnings 0",
-    "check:package": "bun run typecheck && bun run lint && bun run verify-package && bun run build && bun run verify-package --artifacts && bun run test",
+    "check:package": "bun run typecheck && bun run lint && bun run verify-package && bun run build && bun run test",
     "verify-package": "bun src/cli.ts verify-package",
     "release": "bun run format && bun run check:package && bun publish"
   },
@@ -75,7 +59,7 @@
   },
   "devDependencies": {
     "@absolutejs/ai": "^0.0.41",
-    "@absolutejs/mcp": "^0.2.0",
+    "@absolutejs/mcp": "^0.12.0",
     "@eslint/js": "^10.0.1",
     "@sinclair/typebox": "0.34.52",
     "@stylistic/eslint-plugin": "^5.10.0",

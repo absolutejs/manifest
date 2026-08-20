@@ -50,7 +50,7 @@ describe("verify-tree", () => {
     ]);
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("1 package policies valid");
+    expect(stdout).toContain("1 package peer sets valid");
 
     if (process.getuid?.() === unreadableDirectoryMode) return;
     expect(stderr).toContain("skipped unreadable directory");

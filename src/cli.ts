@@ -7,9 +7,9 @@
  *                                      ./src/manifest.ts, then ./dist/manifest.js.
  *   absolute-manifest scaffold         Generate a starter src/manifest.ts
  *                                      from the package.json in cwd.
- *   absolute-manifest verify-package   Validate shared-runtime ownership in
- *                                      package.json without emitting a manifest.
- *   absolute-manifest verify-tree      Recursively validate package policies.
+ *   absolute-manifest verify-package   Validate standard peer dependency
+ *                                      relationships in package.json.
+ *   absolute-manifest verify-tree      Recursively validate package peers.
  */
 import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
@@ -17,10 +17,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Value } from "@sinclair/typebox/value";
 import { resolveManifestExport, validateManifest } from "./load";
-import {
-  validatePackageArtifactPolicy,
-  validatePackageRuntimePolicy,
-} from "./packagePolicy";
+import { validatePackagePeerDependencies } from "./packagePolicy";
 import { serializeManifest } from "./schema";
 import { TOOL_NAME_PATTERN } from "./types";
 
@@ -40,7 +37,7 @@ class CliError extends Error {}
 type PackageJsonShape = {
   name?: string;
   description?: string;
-  absolutejs?: { manifestContract?: number; runtimePeers?: unknown };
+  absolutejs?: { manifestContract?: number };
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   exports?: Record<string, unknown>;
@@ -57,27 +54,10 @@ const readPackageJson = async (dir: string) => {
   return parsed;
 };
 
-const readBuiltJavaScript = async (directory: string) => {
-  const glob = new Bun.Glob("dist/**/*.js");
-  const relativePaths = await Array.fromAsync(
-    glob.scan({ cwd: directory, onlyFiles: true }),
-  );
-  const entries = await Promise.all(
-    relativePaths.map(async (relativePath) => [
-      relativePath,
-      await readFile(join(directory, relativePath), "utf8"),
-    ]),
-  );
-
-  return Object.fromEntries(entries);
-};
-
-const validatePackageAt = async (directory: string, artifacts: boolean) => {
+const validatePackageAt = async (directory: string) => {
   const packageJson = await readPackageJson(directory);
-  if (!artifacts) return validatePackageRuntimePolicy(packageJson);
-  const builtJavaScript = await readBuiltJavaScript(directory);
 
-  return validatePackageArtifactPolicy(packageJson, builtJavaScript);
+  return validatePackagePeerDependencies(packageJson);
 };
 
 const resolveEntry = (cwd: string, explicit?: string) => {
@@ -112,7 +92,7 @@ const emit = async (explicitEntry?: string) => {
 
   const { manifest } = result;
   const problems: string[] = [];
-  const packagePolicy = validatePackageRuntimePolicy(packageJson);
+  const packagePolicy = validatePackagePeerDependencies(packageJson);
   if (!packagePolicy.ok)
     problems.push(...packagePolicy.issues.map(({ message }) => message));
 
@@ -152,11 +132,6 @@ const emit = async (explicitEntry?: string) => {
   if (problems.length > 0) throw new CliError(problems.join("\n  "));
 
   const outDir = join(cwd, "dist");
-  const artifactPolicy = await validatePackageAt(cwd, true);
-  if (!artifactPolicy.ok)
-    throw new CliError(
-      artifactPolicy.issues.map(({ message }) => message).join("\n  "),
-    );
   await mkdir(outDir, { recursive: true });
   const outPath = join(outDir, "manifest.json");
   await writeFile(
@@ -166,17 +141,14 @@ const emit = async (explicitEntry?: string) => {
   console.log(`absolute-manifest: wrote ${outPath}`);
 };
 
-const verifyPackage = async (
-  explicitDirectory: string | undefined,
-  artifacts: boolean,
-) => {
+const verifyPackage = async (explicitDirectory: string | undefined) => {
   const directory = resolve(process.cwd(), explicitDirectory ?? ".");
-  const result = await validatePackageAt(directory, artifacts);
+  const result = await validatePackageAt(directory);
   if (!result.ok)
     throw new CliError(
       result.issues.map(({ message }) => message).join("\n  "),
     );
-  console.log(`absolute-manifest: package policy valid in ${directory}`);
+  console.log(`absolute-manifest: peer dependencies valid in ${directory}`);
 };
 
 const packagePathIsInspectable = (relativePath: string) =>
@@ -222,10 +194,7 @@ const scanPackageTree = async (
   return { packagePaths, skippedDirectories };
 };
 
-const verifyTree = async (
-  explicitDirectory: string | undefined,
-  artifacts: boolean,
-) => {
+const verifyTree = async (explicitDirectory: string | undefined) => {
   const root = resolve(process.cwd(), explicitDirectory ?? ".");
   const scanned = await scanPackageTree(root);
   const packagePaths = scanned.packagePaths
@@ -234,7 +203,7 @@ const verifyTree = async (
   const results = await Promise.all(
     packagePaths.map(async (packagePath) => {
       const directory = resolve(root, packagePath, "..");
-      const result = await validatePackageAt(directory, artifacts);
+      const result = await validatePackageAt(directory);
 
       return { packagePath, result };
     }),
@@ -250,7 +219,7 @@ const verifyTree = async (
       `absolute-manifest: warning — skipped unreadable directory ${directory}`,
     );
   console.log(
-    `absolute-manifest: ${packagePaths.length} package policies valid in ${root}`,
+    `absolute-manifest: ${packagePaths.length} package peer sets valid in ${root}`,
   );
 };
 
@@ -307,16 +276,14 @@ const scaffold = async () => {
 
 const run = async () => {
   const [, , command, ...rest] = process.argv;
-  const artifacts = rest.includes("--artifacts");
-  const directory = rest.find((argument) => argument !== "--artifacts");
+  const [directory] = rest;
   if (command === "emit") await emit(rest[0]);
   else if (command === "scaffold") await scaffold();
-  else if (command === "verify-package")
-    await verifyPackage(directory, artifacts);
-  else if (command === "verify-tree") await verifyTree(directory, artifacts);
+  else if (command === "verify-package") await verifyPackage(directory);
+  else if (command === "verify-tree") await verifyTree(directory);
   else
     throw new CliError(
-      `unknown command "${command ?? ""}" — use: emit [entry] | scaffold | verify-package [directory] [--artifacts] | verify-tree [directory] [--artifacts]`,
+      `unknown command "${command ?? ""}" — use: emit [entry] | scaffold | verify-package [directory] | verify-tree [directory]`,
     );
 };
 
