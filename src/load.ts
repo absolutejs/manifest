@@ -1,4 +1,4 @@
-import { Value } from "@sinclair/typebox/value";
+import { Value } from "typebox/value";
 import { manifestSchema, serializeManifest } from "./schema";
 import { inspectManifestSecurity } from "./security";
 import {
@@ -243,7 +243,7 @@ const validate = (candidate: unknown, source: string) => {
 
   const details = [...Value.Errors(manifestSchema, projected)]
     .slice(0, MAX_REPORTED_ERRORS)
-    .map((error) => `${error.path || "/"}: ${error.message}`)
+    .map((error) => `${error.instancePath || "/"}: ${error.message}`)
     .join("; ");
 
   return invalid(details);

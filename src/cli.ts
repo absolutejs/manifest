@@ -15,7 +15,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { Value } from "@sinclair/typebox/value";
+import { Value } from "typebox/value";
 import { resolveManifestExport, validateManifest } from "./load";
 import { validatePackagePeerDependencies } from "./packagePolicy";
 import { serializeManifest } from "./schema";
@@ -226,7 +226,7 @@ const verifyTree = async (explicitDirectory: string | undefined) => {
 const scaffoldTemplate = (
   name: string,
   description: string,
-) => `import { Type } from '@sinclair/typebox';
+) => `import { Type } from 'typebox';
 import { defineManifest } from '@absolutejs/manifest';
 
 // TODO: replace TConfig with this package's real exported options type so the

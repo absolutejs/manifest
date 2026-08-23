@@ -1,3 +1,4 @@
+import type { TSchema } from "typebox";
 import type {
   AdapterImplementation,
   AdapterSlot,
@@ -16,7 +17,9 @@ export type DiscoverableManifest = {
     string,
     {
       description: string;
-      input: Record<string, unknown>;
+      // A manifest's tool schema is a typebox schema; discovery only reads it
+      // as metadata, so a plain JSON Schema record is accepted too.
+      input: TSchema | Record<string, unknown>;
       authorization?: ToolAuthorization;
     }
   >;

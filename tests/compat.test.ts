@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import type { AIToolMap } from "@absolutejs/ai";
 import type { McpToolRegistry } from "@absolutejs/mcp";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import {
   defineManifest,
   toAIToolMap,
@@ -59,6 +59,13 @@ describe("structural compatibility", () => {
     const mcpTools: McpToolRegistry = toMcpToolRegistry(manifest, bindings);
     const { ping } = mcpTools;
     if (ping === undefined) throw new Error("missing tool");
-    expect(await ping.handler({})).toBe("pong");
+    // mcp 0.12 hands the handler an elicitation context; this tool ignores it.
+    expect(
+      await ping.handler({}, {
+        canElicit: false,
+        canElicitUrl: false,
+        elicit: async () => ({ action: "unsupported" }),
+      }),
+    ).toBe("pong");
   });
 });
