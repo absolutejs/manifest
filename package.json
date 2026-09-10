@@ -46,7 +46,7 @@
     "check:package": "bun run typecheck && bun run lint && bun run verify-package && bun run build && bun run test && absolute-changelog check",
     "verify-package": "bun src/cli.ts verify-package",
     "release": "bun run format && bun run check:package && bun publish",
-    "prepublishOnly": "absolute-changelog check"
+    "prepublishOnly": "bun run check:package"
   },
   "keywords": [
     "absolutejs",
@@ -62,7 +62,7 @@
   },
   "devDependencies": {
     "@absolutejs/ai": "^0.0.41",
-    "@absolutejs/changelog": "^0.5.1",
+    "@absolutejs/changelog": "^0.6.0",
     "@absolutejs/mcp": "^0.12.0",
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",
