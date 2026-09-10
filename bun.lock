@@ -6,6 +6,7 @@
       "name": "@absolutejs/manifest",
       "devDependencies": {
         "@absolutejs/ai": "^0.0.41",
+        "@absolutejs/changelog": "^0.1.2",
         "@absolutejs/mcp": "^0.12.0",
         "@eslint/js": "^10.0.1",
         "@stylistic/eslint-plugin": "^5.10.0",
@@ -30,6 +31,8 @@
     "@absolutejs/agency": ["@absolutejs/agency@0.7.4", "", { "dependencies": { "@absolutejs/manifest": "^0.7.2", "@sinclair/typebox": "^0.34.0" }, "peerDependencies": { "drizzle-orm": ">=1.0.0-rc.4 <2" } }, "sha512-NmWqseXKiMietNHijMgwPEkeEHfbsv/kLwNMA6uQ924cnZQRjZACva1zpYWgQRHgqcmWmt4KgGXs9t+0lQ9Grw=="],
 
     "@absolutejs/ai": ["@absolutejs/ai@0.0.41", "", { "dependencies": { "@absolutejs/linked-providers": "0.0.2", "@absolutejs/sync": "0.7.0" }, "peerDependencies": { "@absolutejs/isolated-jsc": ">= 0.4.0", "@angular/core": "^21.0.0", "elysia": "^1.4.18", "react": "^19.2.0", "svelte": "^5.35.2", "vue": "^3.5.27" }, "optionalPeers": ["@absolutejs/isolated-jsc", "@angular/core", "react", "svelte", "vue"] }, "sha512-TEF6Rvxyz6FxhvvKkEdQrixQCJMMOMhEf5NmBkXYLEwjqA4xUCNxRCB3tYXuNWg/350Y2kqT5VzWtZ/c/KC4fg=="],
+
+    "@absolutejs/changelog": ["@absolutejs/changelog@0.1.2", "", { "bin": { "absolute-changelog": "dist/cli.js" } }, "sha512-q6gQwkDr0IVdWHzTOT3AaZvPSn0ucNidbjBnAUZ8CSwS3wrCd02YMXuBC8sd0ptpYvCowLnR/QWIpBrNqbn+YA=="],
 
     "@absolutejs/linked-providers": ["@absolutejs/linked-providers@0.0.2", "", {}, "sha512-MNUIQBzUFWIqsrC33PO8YpWzT8tW0S3QWpcLZuLrt+nhyffU8w8aDNni/6jrGh36WGqauHWIsaz2gn7hLS+5Sw=="],
 
