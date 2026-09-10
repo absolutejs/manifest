@@ -62,7 +62,7 @@
   },
   "devDependencies": {
     "@absolutejs/ai": "^0.0.41",
-    "@absolutejs/changelog": "^0.4.0",
+    "@absolutejs/changelog": "^0.5.1",
     "@absolutejs/mcp": "^0.12.0",
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",
